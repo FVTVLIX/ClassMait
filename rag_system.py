@@ -40,7 +40,7 @@ class RAGSystem:
             embedding=self.embeddings,
             persist_directory=self.persist_directory
         )
-        self.vector_db.persist()
+        # self.vector_db.persist()
         print("PDF processed and stored successfully!")
 
     def get_answer(self, user_question, user_level):

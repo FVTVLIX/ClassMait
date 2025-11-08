@@ -70,9 +70,35 @@
 #     # Fallback: return the raw text in a single entry to avoid silent failure.
 #     return [{"question": "Quiz", "answer": content}]
 
+quiz_function_schema = {
+    "name": "generate_quiz",
+    "description": "Generates a multiple choice quiz object based on the discussed topic and user level.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "questions": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "question_text": {"type": "string"},
+                        "options": {
+                            "type": "array",
+                            "items": {"type": "string"}
+                        },
+                        "correct_answer": {"type": "string", "description": "The letter of the correct option (e.g., 'A')"},
+                        "explanation": {"type": "string", "description": "A brief explanation of why the correct answer is right."}
+                    },
+                    "required": ["question_text", "options", "correct_answer", "explanation"]
+                }
+            }
+        },
+        "required": ["questions"]
+    }
+}
 
 import json
-from langchain.schema import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain.chat_models import ChatOpenAI
 
 # ... [Paste the quiz_function_schema from the previous guide here] ...
