@@ -148,12 +148,27 @@ body {
     min-height: 100vh;
 }
 
+.main {
+    transition: margin-left var(--transition-base), width var(--transition-base);
+}
+
 .main .block-container {
     max-width: 1200px;
     margin: 0 auto;
     padding-left: var(--spacing-xl);
     padding-right: var(--spacing-xl);
     animation: fadeIn 0.5s ease-out;
+    transition: all var(--transition-base);
+}
+
+/* Main content when sidebar is collapsed */
+[data-testid="stSidebar"][aria-expanded="false"] ~ .main {
+    margin-left: 0 !important;
+}
+
+/* Main content when sidebar is expanded */
+[data-testid="stSidebar"][aria-expanded="true"] ~ .main {
+    margin-left: 0;
 }
 
 /* Center content wrapper */
@@ -161,6 +176,7 @@ body {
     max-width: 800px;
     margin: 0 auto;
     padding: var(--spacing-xl);
+    transition: all var(--transition-base);
 }
 
 /* ================================================
@@ -190,6 +206,33 @@ h1, h2, h3, h4, h5, h6 {
     min-width: 250px;
     max-width: 350px;
     animation: slideInFromLeft var(--transition-base);
+    transition: all var(--transition-base);
+}
+
+/* Sidebar collapsed state */
+[data-testid="stSidebar"][aria-expanded="false"] {
+    min-width: 0;
+    max-width: 0;
+    overflow: hidden;
+}
+
+/* Sidebar expanded state */
+[data-testid="stSidebar"][aria-expanded="true"] {
+    min-width: 250px;
+    max-width: 350px;
+}
+
+/* Sidebar collapse button styling */
+[data-testid="collapsedControl"] {
+    background-color: var(--dark-bg);
+    border: 1px solid var(--dark-border);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-base);
+}
+
+[data-testid="collapsedControl"]:hover {
+    background-color: var(--primary-color);
+    transform: scale(1.05);
 }
 
 [data-testid="stSidebar"] h3 {
@@ -272,12 +315,18 @@ h1, h2, h3, h4, h5, h6 {
     box-shadow: var(--shadow-md);
     animation: fadeIn var(--transition-base);
     backdrop-filter: blur(10px);
+    transition: all var(--transition-base);
 }
 
 .stChatMessage:hover {
     box-shadow: var(--shadow-lg);
     transform: translateX(2px);
     transition: all var(--transition-fast);
+}
+
+/* Chat container smooth transitions */
+[data-testid="stChatMessageContainer"] {
+    transition: all var(--transition-base);
 }
 
 /* ================================================
@@ -478,10 +527,44 @@ h1, h2, h3, h4, h5, h6 {
         padding-right: var(--spacing-md);
     }
 
-    /* Sidebar adjustments */
+    /* Sidebar adjustments for mobile */
     [data-testid="stSidebar"] {
         min-width: 100%;
         max-width: 100%;
+    }
+
+    [data-testid="stSidebar"][aria-expanded="true"] {
+        min-width: 100%;
+        max-width: 100%;
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 999;
+    }
+
+    [data-testid="stSidebar"][aria-expanded="false"] {
+        min-width: 0;
+        max-width: 0;
+    }
+
+    /* Main content full width on mobile when sidebar is collapsed */
+    [data-testid="stSidebar"][aria-expanded="false"] ~ .main {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+
+    /* Overlay effect when sidebar is open on mobile */
+    [data-testid="stSidebar"][aria-expanded="true"]::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: -1;
+        animation: fadeIn 0.3s ease;
     }
 
     [data-testid="stSidebar"] .stButton button {
