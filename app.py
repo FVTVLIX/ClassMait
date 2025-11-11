@@ -64,6 +64,9 @@ import tempfile
 import json
 import streamlit as st
 from pathlib import Path
+from chat_history import ChatHistoryManager
+import time
+
 
 # -------------------------------------------------
 #  Your own RAG wrapper (make sure it works with the API key)
@@ -73,14 +76,15 @@ from rag_system import RAGSystem   # <-- keep this file unchanged except for opt
 # -------------------------------------------------
 #  Session‑state defaults (run only once per session)
 # -------------------------------------------------
+# Session state initialization
 if "step" not in st.session_state:
-    st.session_state.step = 0               # 0=home, 1=api, 2=upload, 3=level, 4=process, 5=chat
+    st.session_state.step = 0
 
 if "api_key" not in st.session_state:
     st.session_state.api_key = ""
 
 if "uploaded_path" not in st.session_state:
-    st.session_state.uploaded_path = None   # absolute path string
+    st.session_state.uploaded_path = None
 
 if "pdf_bytes" not in st.session_state:
     st.session_state.pdf_bytes = None
@@ -92,7 +96,17 @@ if "rag" not in st.session_state:
     st.session_state.rag = None
 
 if "messages" not in st.session_state:
-    st.session_state.messages = []          # list of dicts: {"role": "user"/"assistant", "content": "..."} 
+    st.session_state.messages = []
+
+# Chat history manager
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = ChatHistoryManager()
+
+if "current_session_id" not in st.session_state:
+    st.session_state.current_session_id = None
+
+if "session_title" not in st.session_state:
+    st.session_state.session_title = None
 
 # -------------------------------------------------
 #  Helper: write uploaded file to a *named* temp file
@@ -332,60 +346,194 @@ def page_processing():
 # -------------------------------------------------
 #  PAGE 5 – CHAT INTERFACE
 # -------------------------------------------------
+
+def create_new_chat():
+    import uuid
+    chat_id = str(uuid.uuid4())[:8]  # Short ID
+    st.session_state.chat_sessions[chat_id] = []
+    st.session_state.current_chat_id = chat_id
+    return chat_id
+
+def colored_header(title, color_name="blue-70", anchor="old"):
+    """
+    Creates a styled header using only native Streamlit components.
+    """
+    color_map = {
+        "blue-70": "#6366f1",
+        "violet-70": "#7c3aed",
+        "green-70": "#38a169",
+        "red-70": "#dc3545",
+        "gray-70": "#6c757d",
+    }
+    
+    bg_color = color_map.get(color_name, "#6366f1")
+    
+    st.markdown(
+        f"""
+        <div style="
+            background-color: {bg_color};
+            color: white;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        ">
+            <h3 style="margin: 0; font-size: 1.2rem;">
+                {title}
+            </h3>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
 def page_chat():
-    # Initialize processing flag if it doesn't exist
-    if "processing_response" not in st.session_state:
-        st.session_state.processing_response = False
-
-    # Navigation bar
-    col_left, col_center, col_right = st.columns([2, 6, 1])
+    # Import the new function
+    # from chat_history import ChatHistoryManager  # Your existing chat manager
     
-    with col_left:
-        if st.button("← Back to Settings", key="chat_back_top"):
-            st.session_state.step = 3
+    # Create two columns: sidebar and main content
+    col_sidebar, col_main = st.columns([1, 3])
+    
+    # ---------- SIDEBAR ----------
+    with col_sidebar:
+        # Use the native colored header
+        colored_header("💬 Chat History", color_name="violet-70")
+        
+        # New chat button
+        if st.button("🆕 New Chat", key="new_chat_button", use_container_width=True):
+            # Create new session
+            session_id = st.session_state.chat_history.create_session()
+            st.session_state.current_session_id = session_id
+            st.session_state.messages = []
             st.rerun()
+        
+        st.markdown("---")
+        
+        # Recent sessions
+        recent_sessions = st.session_state.chat_history.get_recent_sessions()
+        
+        if recent_sessions:
+            st.markdown("### Recent Chats")
+            
+            for session_id, session_data in recent_sessions.items():
+                # Create a clickable card for each session
+                session_title = session_data.get("title", "Untitled")
+                created_date = session_data.get("created_at", "")[:10]
+                
+                if st.button(
+                    f"{session_title} ({created_date})",
+                    key=f"session_{session_id}",
+                    use_container_width=True,
+                    help=f"Created: {session_data.get('created_at')}"
+                ):
+                    # Switch to this session
+                    st.session_state.current_session_id = session_id
+                    st.session_state.messages = session_data.get("messages", [])
+                    st.rerun()
+                
+                st.markdown("---")
+        else:
+            st.markdown("### No previous chats")
     
-    with col_center:
+    # ---------- MAIN CONTENT ----------
+    with col_main:
+        # Session title input
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            session_title = st.text_input(
+                "Chat Title",
+                value=st.session_state.chat_history.get_session_title(
+                    st.session_state.current_session_id
+                ) if st.session_state.current_session_id else "Untitled",
+                key="session_title_input"
+            )
+            
+            if st.button("💾 Save Title", key="save_title"):
+                if st.session_state.current_session_id:
+                    st.session_state.chat_history.sessions[st.session_state.current_session_id]["title"] = session_title
+                    st.session_state.chat_history.save_history()
+                    st.rerun()
+        
+        with col2:
+            if st.button("← Back to Settings", key="chat_to_settings"):
+                st.session_state.step = 3
+                st.rerun()
+        
+        st.markdown("---")
+        
+        # Current chat info
+        if st.session_state.current_session_id:
+            session_data = st.session_state.chat_history.sessions.get(
+                st.session_state.current_session_id, {}
+            )
+            session_title = session_data.get("title", "Untitled")
+            session_date = session_data.get("created_at", "")[:10]
+            
+            st.markdown(
+                f"""
+                <div style="
+                    background-color: #f0f4ff;
+                    padding: 1rem;
+                    border-radius: 0.5rem;
+                    margin-bottom: 1rem;
+                ">
+                    <h4 style="margin: 0; color: #1e3a8a;">
+                        📚 {session_title} 
+                        <small style="opacity: 0.7;">({session_date})</small>
+                    </h4>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        
+        # Chat content
+        st.markdown("## 💬 Ask Anything About Your Textbook")
         st.markdown(
-            f"<h4 style='text-align:center; margin:0;'>Step {st.session_state.step + 1} of 6</h4>",
-            unsafe_allow_html=True,
+            "Type a question below; the assistant will answer using the material you uploaded."
         )
-    
-    st.markdown("---")
-    
-    # Chat content
-    st.markdown("## 💬 Ask Anything About Your Textbook")
-    st.markdown("Type a question below; the assistant will answer using the material you uploaded.")
 
-    # Display messages
-    for msg in st.session_state.messages:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
-
-    # Handle new input
-    if prompt := st.chat_input("Enter your question…"):
-        # Add user message
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        st.session_state.processing_response = True
-        st.rerun()
-
-    # Process response if needed
-    if (st.session_state.processing_response and 
-        st.session_state.messages and 
-        st.session_state.messages[-1]["role"] == "user"):
+        # Display messages
+        for msg in st.session_state.messages:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
         
-        with st.chat_message("assistant"):
-            with st.spinner("Thinking…"):
-                answer = st.session_state.rag.get_answer(
-                    st.session_state.messages[-1]["content"], 
-                    st.session_state.level
+        # Handle new input
+        if prompt := st.chat_input("Enter your question…", key="chat_input"):
+            # Add user message to history
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            
+            # Update session in history
+            st.session_state.chat_history.update_session_messages(
+                st.session_state.current_session_id,
+                st.session_state.messages
+            )
+            
+            # Add "Thinking..." placeholder
+            st.session_state.messages.append({"role": "assistant", "content": "🔍 Analyzing..."})
+            
+            # Rerun to show placeholder
+            st.rerun()
+        
+        # Process last message if it's a user question that hasn't been answered
+        if (st.session_state.messages and 
+            st.session_state.messages[-1]["role"] == "user" and 
+            "🔍 Analyzing..." in st.session_state.messages[-1]["content"]):
+            
+            with st.chat_message("assistant"):
+                with st.spinner("Generating response..."):
+                    answer = st.session_state.rag.get_answer(
+                        st.session_state.messages[-2]["content"], 
+                        st.session_state.level
+                    )
+                
+                # Update message with actual answer
+                st.session_state.messages[-1]["content"] = answer
+                st.session_state.chat_history.update_session_messages(
+                    st.session_state.current_session_id,
+                    st.session_state.messages
                 )
-                st.session_state.messages.append({"role": "assistant", "content": answer})
-                st.markdown(answer)
-        
-        # Reset processing flag
-        st.session_state.processing_response = False
-        st.rerun()
+                
+                st.rerun()
 # -------------------------------------------------
 #  MAIN ROUTER
 # -------------------------------------------------
@@ -394,6 +542,12 @@ def main():
     # if Path("style.css").exists():
     #     with open("style.css") as f:
     #         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    debug_mode = st.sidebar.checkbox("🐛 Debug Mode", value=True) # Set to True to see prints
+
+    # If debug mode is off, redirect prints to a file
+    if not debug_mode:
+        import sys
+        sys.stdout = open(os.devnull, 'w')
 
     step = st.session_state.step
 
@@ -413,6 +567,9 @@ def main():
         st.error("Invalid step – resetting.")
         st.session_state.step = 0
         st.rerun()
+        
+    if not debug_mode:
+        sys.stdout = sys.__stdout__
 
 if __name__ == "__main__":
     main()
