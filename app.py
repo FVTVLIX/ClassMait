@@ -128,6 +128,81 @@ def save_uploaded_file(uploaded_file) -> str:
         return tmp.name  # <-- returns something like /var/folders/.../tmpabcd1234.pdf
 
 # -------------------------------------------------
+#  Session Persistence Helper Functions
+# -------------------------------------------------
+SESSION_FILE = "session_state.json"
+
+def save_session_state():
+    """Saves important session state to a JSON file."""
+    try:
+        state_to_save = {
+            "api_key": st.session_state.get("api_key", ""),
+            "level": st.session_state.get("level", "Beginner"),
+            "chat_threads": st.session_state.get("chat_threads", []),
+            "current_thread_id": st.session_state.get("current_thread_id", None),
+            "step": st.session_state.get("step", 0),
+            "pdf_bytes": None,  # Don't save PDF bytes - too large
+            "uploaded_path": None,  # Don't save temp paths
+        }
+
+        with open(SESSION_FILE, "w") as f:
+            json.dump(state_to_save, f, indent=2)
+        return True
+    except Exception as e:
+        print(f"Error saving session state: {e}")
+        return False
+
+def load_session_state():
+    """Loads session state from JSON file if it exists."""
+    if not Path(SESSION_FILE).exists():
+        return False
+
+    try:
+        with open(SESSION_FILE, "r") as f:
+            saved_state = json.load(f)
+
+        # Only load if we're at the initial state
+        if st.session_state.step == 0 and not st.session_state.api_key:
+            st.session_state.api_key = saved_state.get("api_key", "")
+            st.session_state.level = saved_state.get("level", "Beginner")
+            st.session_state.chat_threads = saved_state.get("chat_threads", [])
+            st.session_state.current_thread_id = saved_state.get("current_thread_id", None)
+
+            # If we have an API key and chat history, skip to chat page
+            if st.session_state.api_key and st.session_state.chat_threads:
+                st.session_state.step = saved_state.get("step", 5)
+                # Set environment variable
+                os.environ["OPENAI_API_KEY"] = st.session_state.api_key
+
+        return True
+    except Exception as e:
+        print(f"Error loading session state: {e}")
+        return False
+
+def load_api_key_from_secrets():
+    """Loads API key from Streamlit secrets if available."""
+    try:
+        if hasattr(st, 'secrets') and "OPENAI_API_KEY" in st.secrets:
+            api_key = st.secrets["OPENAI_API_KEY"]
+            if api_key and api_key != "sk-your-api-key-here":
+                st.session_state.api_key = api_key
+                os.environ["OPENAI_API_KEY"] = api_key
+                return True
+    except Exception as e:
+        pass
+    return False
+
+def clear_session_data():
+    """Clears saved session data."""
+    try:
+        if Path(SESSION_FILE).exists():
+            os.remove(SESSION_FILE)
+        return True
+    except Exception as e:
+        print(f"Error clearing session data: {e}")
+        return False
+
+# -------------------------------------------------
 #  Chat History Helper Functions
 # -------------------------------------------------
 def create_new_thread():
@@ -226,6 +301,19 @@ def nav_bar():
 # -------------------------------------------------
 def page_home():
     """Welcome screen – the only page without a nav bar."""
+
+    # Try to load API key from secrets on first load
+    if not st.session_state.api_key:
+        load_api_key_from_secrets()
+
+    # Try to load saved session state on first load
+    if "session_loaded" not in st.session_state:
+        st.session_state.session_loaded = True
+        if load_session_state():
+            # If we successfully loaded a previous session with API key, skip ahead
+            if st.session_state.api_key and st.session_state.step > 0:
+                st.rerun()
+
     st.markdown(
         """
         <div style="text-align:center;">
@@ -263,6 +351,11 @@ def page_home():
 def page_api_key():
     nav_bar()
 
+    # Check for API key from secrets
+    if not st.session_state.api_key:
+        if load_api_key_from_secrets():
+            st.success("✅ API key loaded from secrets.toml!")
+
     st.markdown(
         """
         ## 🔑 OpenAI API Key
@@ -273,6 +366,18 @@ def page_api_key():
         """,
         unsafe_allow_html=True,
     )
+
+    # Show info about using secrets.toml
+    with st.expander("💡 Tip: Save your API key permanently"):
+        st.markdown("""
+        To avoid re-entering your API key every time:
+        1. Open `.streamlit/secrets.toml` in your project directory
+        2. Uncomment the `OPENAI_API_KEY` line
+        3. Replace `"sk-your-api-key-here"` with your actual API key
+        4. Save the file and restart the app
+
+        Your API key will be automatically loaded on startup!
+        """)
 
     api_key = st.text_input(
         "API Key",
@@ -296,6 +401,7 @@ def page_api_key():
             disabled=not api_key,
             use_container_width=True,
         ):
+            save_session_state()  # Save progress
             st.session_state.step = 2   # go to upload page
             st.rerun()
 
@@ -349,9 +455,37 @@ def page_level():
     )
     st.session_state.level = level
 
+    # Session management section
+    st.markdown("---")
+    st.markdown("### 🔧 Session Management")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("💾 Save Session", use_container_width=True):
+            if save_session_state():
+                st.success("Session saved successfully!")
+            else:
+                st.error("Failed to save session")
+
+    with col2:
+        if st.button("🗑️ Clear All Data", use_container_width=True, type="secondary"):
+            if clear_session_data():
+                # Reset session state
+                for key in ["chat_threads", "current_thread_id", "api_key", "rag"]:
+                    if key in st.session_state:
+                        del st.session_state[key]
+                st.success("All data cleared!")
+                time.sleep(1)
+                st.session_state.step = 0
+                st.rerun()
+
+    st.markdown("---")
+
     col_left, col_center, col_right = st.columns([1, 6, 1])
     with col_center:
         if st.button("Process Textbook →", key="process_start", use_container_width=True):
+            save_session_state()  # Save before processing
             st.session_state.step = 4   # go to processing page
             st.rerun()
 
@@ -434,6 +568,7 @@ def page_chat():
         # New chat button
         if st.button("➕ New Chat", key="new_chat_btn", use_container_width=True):
             create_new_thread()
+            save_session_state()  # Save after creating new thread
             st.rerun()
 
         st.markdown("---")
@@ -458,12 +593,14 @@ def page_chat():
                             disabled=is_current,
                         ):
                             switch_thread(thread["id"])
+                            save_session_state()  # Save after switching
                             st.rerun()
 
                     with col2:
                         # Delete button (small)
                         if st.button("🗑️", key=f"delete_{thread['id']}", help="Delete chat"):
                             delete_thread(thread["id"])
+                            save_session_state()  # Save after deleting
                             st.rerun()
 
                     # Show timestamp
@@ -507,6 +644,9 @@ def page_chat():
         # Update timestamp
         current_thread["timestamp"] = datetime.now().isoformat()
 
+        # Auto-save session state
+        save_session_state()
+
         st.session_state.processing_response = True
         st.rerun()
 
@@ -523,6 +663,9 @@ def page_chat():
                 )
                 current_thread["messages"].append({"role": "assistant", "content": answer})
                 st.markdown(answer)
+
+        # Auto-save after getting response
+        save_session_state()
 
         # Reset processing flag
         st.session_state.processing_response = False
