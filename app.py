@@ -263,9 +263,9 @@ def delete_thread(thread_id):
             create_new_thread()
 
 def update_thread_title(thread, first_message):
-    """Updates thread title based on first message (truncate to 40 chars)."""
+    """Updates thread title based on first message (truncate to 30 chars)."""
     if thread["title"] == "New Conversation" and first_message:
-        thread["title"] = first_message[:40] + "..." if len(first_message) > 40 else first_message
+        thread["title"] = first_message[:30] + "..." if len(first_message) > 30 else first_message
 
 def format_timestamp(iso_timestamp):
     """Formats ISO timestamp to readable format."""
@@ -621,7 +621,7 @@ def page_chat():
                 # Create a container for each thread
                 thread_container = st.container()
                 with thread_container:
-                    col1, col2 = st.columns([5, 1])
+                    col1, col2 = st.columns([8, 1])
 
                     with col1:
                         # Thread button with highlighting for current thread
@@ -643,8 +643,11 @@ def page_chat():
                             save_session_state()  # Save after deleting
                             st.rerun()
 
-                    # Show timestamp
-                    st.caption(format_timestamp(thread["timestamp"]))
+                    # Show timestamp with smaller font
+                    st.markdown(
+                        f"<p style='color: #94a3b8; font-size: 0.75rem; margin-top: -0.5rem;'>{format_timestamp(thread['timestamp'])}</p>",
+                        unsafe_allow_html=True
+                    )
 
                 st.markdown("---")
         else:
@@ -863,6 +866,20 @@ def main():
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
 
+        /* Main content area responsiveness */
+        .main .block-container {
+            max-width: 100%;
+            padding-left: 2rem;
+            padding-right: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .main .block-container {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+        }
+
         /* Sidebar styling */
         [data-testid="stSidebar"] {
             background-color: #1e1e2e;
@@ -887,6 +904,21 @@ def main():
             background-color: #667eea;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Sidebar button text truncation */
+        [data-testid="stSidebar"] .stButton button {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+            text-align: left;
+        }
+
+        /* Sidebar width */
+        [data-testid="stSidebar"] {
+            min-width: 250px;
+            max-width: 350px;
         }
 
         /* Chat message styling */
@@ -978,6 +1010,22 @@ def main():
         .caption {
             color: #94a3b8 !important;
             font-size: 0.75rem;
+        }
+
+        /* Chat history item container */
+        [data-testid="stSidebar"] [data-testid="column"] {
+            padding: 0 !important;
+        }
+
+        /* Responsive chat input */
+        .stChatInput {
+            max-width: 100%;
+        }
+
+        /* Settings page sections */
+        .stExpander {
+            background-color: white;
+            border-radius: 8px;
         }
         </style>
     """, unsafe_allow_html=True)
