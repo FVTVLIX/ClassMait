@@ -62,8 +62,20 @@ import os
 import time
 import tempfile
 import json
+import uuid
+from datetime import datetime
 import streamlit as st
 from pathlib import Path
+
+# -------------------------------------------------
+#  Page Configuration (must be first Streamlit command)
+# -------------------------------------------------
+st.set_page_config(
+    page_title="ClassMateAI - Your Learning Assistant",
+    page_icon="🧠",
+    layout="wide",
+    initial_sidebar_state="auto",
+)
 
 # -------------------------------------------------
 #  Your own RAG wrapper (make sure it works with the API key)
@@ -91,6 +103,14 @@ if "level" not in st.session_state:
 if "rag" not in st.session_state:
     st.session_state.rag = None
 
+# NEW: Chat history management
+if "chat_threads" not in st.session_state:
+    st.session_state.chat_threads = []      # list of thread objects: {"id": str, "title": str, "timestamp": str, "messages": []}
+
+if "current_thread_id" not in st.session_state:
+    st.session_state.current_thread_id = None
+
+# DEPRECATED: Keep for backward compatibility, but we'll use chat_threads now
 if "messages" not in st.session_state:
     st.session_state.messages = []          # list of dicts: {"role": "user"/"assistant", "content": "..."} 
 
@@ -106,6 +126,73 @@ def save_uploaded_file(uploaded_file) -> str:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
         tmp.write(uploaded_file.getvalue())
         return tmp.name  # <-- returns something like /var/folders/.../tmpabcd1234.pdf
+
+# -------------------------------------------------
+#  Chat History Helper Functions
+# -------------------------------------------------
+def create_new_thread():
+    """Creates a new chat thread and sets it as current."""
+    thread_id = str(uuid.uuid4())
+    new_thread = {
+        "id": thread_id,
+        "title": "New Conversation",
+        "timestamp": datetime.now().isoformat(),
+        "messages": []
+    }
+    st.session_state.chat_threads.insert(0, new_thread)  # Add to beginning
+    st.session_state.current_thread_id = thread_id
+
+    # Keep only last 10 threads
+    if len(st.session_state.chat_threads) > 10:
+        st.session_state.chat_threads = st.session_state.chat_threads[:10]
+
+def get_current_thread():
+    """Returns the current active thread, or creates one if none exists."""
+    if not st.session_state.current_thread_id:
+        create_new_thread()
+
+    for thread in st.session_state.chat_threads:
+        if thread["id"] == st.session_state.current_thread_id:
+            return thread
+
+    # If thread not found, create new one
+    create_new_thread()
+    return get_current_thread()
+
+def switch_thread(thread_id):
+    """Switches to a different chat thread."""
+    st.session_state.current_thread_id = thread_id
+
+def delete_thread(thread_id):
+    """Deletes a chat thread."""
+    st.session_state.chat_threads = [t for t in st.session_state.chat_threads if t["id"] != thread_id]
+
+    # If we deleted the current thread, create a new one
+    if st.session_state.current_thread_id == thread_id:
+        if st.session_state.chat_threads:
+            st.session_state.current_thread_id = st.session_state.chat_threads[0]["id"]
+        else:
+            create_new_thread()
+
+def update_thread_title(thread, first_message):
+    """Updates thread title based on first message (truncate to 40 chars)."""
+    if thread["title"] == "New Conversation" and first_message:
+        thread["title"] = first_message[:40] + "..." if len(first_message) > 40 else first_message
+
+def format_timestamp(iso_timestamp):
+    """Formats ISO timestamp to readable format."""
+    dt = datetime.fromisoformat(iso_timestamp)
+    now = datetime.now()
+
+    # If today, show time
+    if dt.date() == now.date():
+        return dt.strftime("%I:%M %p")
+    # If this year, show month and day
+    elif dt.year == now.year:
+        return dt.strftime("%b %d")
+    # Otherwise show year
+    else:
+        return dt.strftime("%b %d, %Y")
 
 # -------------------------------------------------
 #  Navigation bar (appears at the top of every page except home)
@@ -330,59 +417,113 @@ def page_processing():
     st.rerun()
 
 # -------------------------------------------------
-#  PAGE 5 – CHAT INTERFACE
+#  PAGE 5 – CHAT INTERFACE WITH HISTORY SIDEBAR
 # -------------------------------------------------
 def page_chat():
     # Initialize processing flag if it doesn't exist
     if "processing_response" not in st.session_state:
         st.session_state.processing_response = False
 
-    # Navigation bar
-    col_left, col_center, col_right = st.columns([2, 6, 1])
-    
-    with col_left:
-        if st.button("← Back to Settings", key="chat_back_top"):
+    # Get current thread
+    current_thread = get_current_thread()
+
+    # Create sidebar for chat history
+    with st.sidebar:
+        st.markdown("### 💬 Chat History")
+
+        # New chat button
+        if st.button("➕ New Chat", key="new_chat_btn", use_container_width=True):
+            create_new_thread()
+            st.rerun()
+
+        st.markdown("---")
+
+        # Display chat threads (last 10)
+        if st.session_state.chat_threads:
+            for idx, thread in enumerate(st.session_state.chat_threads[:10]):
+                is_current = thread["id"] == st.session_state.current_thread_id
+
+                # Create a container for each thread
+                thread_container = st.container()
+                with thread_container:
+                    col1, col2 = st.columns([5, 1])
+
+                    with col1:
+                        # Thread button with highlighting for current thread
+                        button_label = f"{'🟢 ' if is_current else ''}{thread['title']}"
+                        if st.button(
+                            button_label,
+                            key=f"thread_{thread['id']}",
+                            use_container_width=True,
+                            disabled=is_current,
+                        ):
+                            switch_thread(thread["id"])
+                            st.rerun()
+
+                    with col2:
+                        # Delete button (small)
+                        if st.button("🗑️", key=f"delete_{thread['id']}", help="Delete chat"):
+                            delete_thread(thread["id"])
+                            st.rerun()
+
+                    # Show timestamp
+                    st.caption(format_timestamp(thread["timestamp"]))
+
+                st.markdown("---")
+        else:
+            st.info("No chat history yet. Start a new conversation!")
+
+        # Settings footer
+        st.markdown("---")
+        if st.button("⚙️ Settings", key="settings_btn", use_container_width=True):
             st.session_state.step = 3
             st.rerun()
-    
+
+    # Main chat area - Navigation bar
+    col_left, col_center, col_right = st.columns([2, 6, 1])
+
     with col_center:
         st.markdown(
-            f"<h4 style='text-align:center; margin:0;'>Step {st.session_state.step + 1} of 6</h4>",
+            f"<h4 style='text-align:center; margin:0;'>💬 {current_thread['title']}</h4>",
             unsafe_allow_html=True,
         )
-    
-    st.markdown("---")
-    
-    # Chat content
-    st.markdown("## 💬 Ask Anything About Your Textbook")
-    st.markdown("Type a question below; the assistant will answer using the material you uploaded.")
 
-    # Display messages
-    for msg in st.session_state.messages:
+    st.markdown("---")
+
+    # Display messages from current thread
+    for msg in current_thread["messages"]:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
     # Handle new input
     if prompt := st.chat_input("Enter your question…"):
-        # Add user message
-        st.session_state.messages.append({"role": "user", "content": prompt})
+        # Add user message to current thread
+        current_thread["messages"].append({"role": "user", "content": prompt})
+
+        # Update thread title if it's the first message
+        if len(current_thread["messages"]) == 1:
+            update_thread_title(current_thread, prompt)
+
+        # Update timestamp
+        current_thread["timestamp"] = datetime.now().isoformat()
+
         st.session_state.processing_response = True
         st.rerun()
 
     # Process response if needed
-    if (st.session_state.processing_response and 
-        st.session_state.messages and 
-        st.session_state.messages[-1]["role"] == "user"):
-        
+    if (st.session_state.processing_response and
+        current_thread["messages"] and
+        current_thread["messages"][-1]["role"] == "user"):
+
         with st.chat_message("assistant"):
             with st.spinner("Thinking…"):
                 answer = st.session_state.rag.get_answer(
-                    st.session_state.messages[-1]["content"], 
+                    current_thread["messages"][-1]["content"],
                     st.session_state.level
                 )
-                st.session_state.messages.append({"role": "assistant", "content": answer})
+                current_thread["messages"].append({"role": "assistant", "content": answer})
                 st.markdown(answer)
-        
+
         # Reset processing flag
         st.session_state.processing_response = False
         st.rerun()
@@ -390,10 +531,132 @@ def page_chat():
 #  MAIN ROUTER
 # -------------------------------------------------
 def main():
-    # Optional: load a CSS file for extra polish (you can skip this)
-    # if Path("style.css").exists():
-    #     with open("style.css") as f:
-    #         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    # Custom CSS for better UI
+    st.markdown("""
+        <style>
+        /* Main container styling */
+        .stApp {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        /* Sidebar styling */
+        [data-testid="stSidebar"] {
+            background-color: #1e1e2e;
+            border-right: 2px solid #4a5568;
+        }
+
+        [data-testid="stSidebar"] h3 {
+            color: #e2e8f0;
+            font-weight: 600;
+        }
+
+        [data-testid="stSidebar"] .stButton button {
+            background-color: #4a5568;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            transition: all 0.3s ease;
+        }
+
+        [data-testid="stSidebar"] .stButton button:hover {
+            background-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Chat message styling */
+        .stChatMessage {
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Button styling */
+        .stButton button {
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .stButton button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Input styling */
+        .stTextInput input, .stFileUploader {
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+            transition: border-color 0.3s ease;
+        }
+
+        .stTextInput input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        /* Progress bar styling */
+        .stProgress > div > div {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        }
+
+        /* Radio button styling */
+        .stRadio > div {
+            background-color: white;
+            padding: 1rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* File uploader styling */
+        [data-testid="stFileUploader"] {
+            background-color: white;
+            border-radius: 12px;
+            padding: 2rem;
+            border: 2px dashed #cbd5e0;
+        }
+
+        /* Markdown headers */
+        h1, h2, h3, h4 {
+            color: #2d3748;
+            font-weight: 600;
+        }
+
+        /* Chat input box */
+        .stChatInputContainer {
+            border-top: 2px solid #e2e8f0;
+            padding-top: 1rem;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Caption (timestamp) styling */
+        .caption {
+            color: #94a3b8 !important;
+            font-size: 0.75rem;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
     step = st.session_state.step
 
