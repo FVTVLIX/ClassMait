@@ -143,6 +143,7 @@ def save_session_state():
             "step": st.session_state.get("step", 0),
             "pdf_bytes": None,  # Don't save PDF bytes - too large
             "uploaded_path": None,  # Don't save temp paths
+            "rag_initialized": st.session_state.rag is not None,  # Track if RAG was set up
         }
 
         with open(SESSION_FILE, "w") as f:
@@ -169,10 +170,22 @@ def load_session_state():
             st.session_state.current_thread_id = saved_state.get("current_thread_id", None)
 
             # If we have an API key and chat history, skip to chat page
-            if st.session_state.api_key and st.session_state.chat_threads:
-                st.session_state.step = saved_state.get("step", 5)
+            # BUT only if RAG was initialized (otherwise go to upload page)
+            if st.session_state.api_key:
                 # Set environment variable
                 os.environ["OPENAI_API_KEY"] = st.session_state.api_key
+
+                # Check if RAG was previously initialized
+                if saved_state.get("rag_initialized", False):
+                    # RAG was initialized before but is lost on refresh
+                    # Go to settings page so user can re-upload PDF
+                    st.session_state.step = 3
+                elif st.session_state.chat_threads:
+                    # Has chat threads but no RAG - go to settings
+                    st.session_state.step = 3
+                else:
+                    # Fresh start with just API key - go to upload
+                    st.session_state.step = 2
 
         return True
     except Exception as e:
@@ -445,6 +458,20 @@ def page_upload():
 def page_level():
     nav_bar()
 
+    # Show warning if RAG is not initialized (e.g., after page refresh)
+    if st.session_state.rag is None:
+        st.warning(
+            """
+            ⚠️ **Notice:** Your textbook needs to be re-processed after refreshing the page.
+
+            Please upload your PDF again to continue chatting. Your chat history has been preserved!
+            """
+        )
+        if st.button("📚 Upload Textbook", type="primary"):
+            st.session_state.step = 2
+            st.rerun()
+        st.markdown("---")
+
     st.markdown("## 🎯 Choose Your Learning Level")
 
     level = st.radio(
@@ -482,12 +509,25 @@ def page_level():
 
     st.markdown("---")
 
+    # Show different buttons based on RAG status
     col_left, col_center, col_right = st.columns([1, 6, 1])
     with col_center:
-        if st.button("Process Textbook →", key="process_start", use_container_width=True):
-            save_session_state()  # Save before processing
-            st.session_state.step = 4   # go to processing page
-            st.rerun()
+        # If RAG exists, allow going to chat
+        if st.session_state.rag is not None:
+            if st.button("Continue to Chat →", key="goto_chat", use_container_width=True, type="primary"):
+                save_session_state()
+                st.session_state.step = 5
+                st.rerun()
+        # Otherwise, need to process textbook
+        elif st.session_state.uploaded_path or st.session_state.pdf_bytes:
+            if st.button("Process Textbook →", key="process_start", use_container_width=True):
+                save_session_state()  # Save before processing
+                st.session_state.step = 4   # go to processing page
+                st.rerun()
+        else:
+            if st.button("Upload Textbook →", key="goto_upload", use_container_width=True):
+                st.session_state.step = 2
+                st.rerun()
 
 # -------------------------------------------------
 #  PAGE 4 – PROCESSING (the step that used to error)
@@ -557,6 +597,31 @@ def page_chat():
     # Initialize processing flag if it doesn't exist
     if "processing_response" not in st.session_state:
         st.session_state.processing_response = False
+
+    # CHECK: Ensure RAG system is initialized before allowing chat
+    if st.session_state.rag is None:
+        st.error("⚠️ **PDF Processing Required**")
+        st.warning(
+            """
+            Your textbook needs to be processed before you can chat.
+
+            This happens when:
+            - You refresh the page (the RAG system needs to be reloaded)
+            - You haven't uploaded a PDF yet
+            - The session was restored from a previous visit
+
+            **Please upload and process your textbook to continue.**
+            """
+        )
+
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            if st.button("📚 Go to Upload & Process", use_container_width=True, type="primary"):
+                st.session_state.step = 2
+                st.rerun()
+
+        st.info("💡 **Tip:** Your chat history has been preserved and will be available after processing.")
+        st.stop()  # Stop execution here to prevent the error
 
     # Get current thread
     current_thread = get_current_thread()

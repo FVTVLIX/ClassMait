@@ -22,6 +22,15 @@ The app now automatically saves your session data, so you won't lose your progre
 - ✅ Your selected learning level
 - ✅ Current active chat thread
 
+### Important Note About PDFs
+**After refreshing the page, you'll need to re-upload and process your PDF.**
+
+This is because the RAG system (which processes your textbook) cannot be saved to disk. However:
+- Your chat history is preserved
+- Your API key is saved
+- You just need to upload the same PDF again and process it
+- Then you can continue chatting with all your previous conversations intact
+
 ### How It Works
 
 #### Option 1: Automatic Session Saving (Easiest)
