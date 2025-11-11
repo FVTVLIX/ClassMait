@@ -575,6 +575,25 @@ def page_chat():
     if "processing_response" not in st.session_state:
         st.session_state.processing_response = False
 
+    # Add mobile menu toggle button and JavaScript
+    st.markdown("""
+        <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
+            ☰ Menu
+        </button>
+        <div class="mobile-menu-overlay" onclick="toggleMobileMenu()"></div>
+        <script>
+        function toggleMobileMenu() {
+            const sidebar = window.parent.document.querySelector('[data-testid="stSidebar"]');
+            const overlay = window.parent.document.querySelector('.mobile-menu-overlay');
+
+            if (sidebar && overlay) {
+                sidebar.classList.toggle('mobile-menu-open');
+                overlay.classList.toggle('active');
+            }
+        }
+        </script>
+    """, unsafe_allow_html=True)
+
     # CHECK: Ensure RAG system is initialized before allowing chat
     if st.session_state.rag is None:
         st.error("⚠️ **PDF Processing Required**")

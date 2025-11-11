@@ -149,7 +149,7 @@ body {
 }
 
 .main {
-    transition: margin-left var(--transition-base), width var(--transition-base);
+    transition: all var(--transition-base);
 }
 
 .main .block-container {
@@ -159,16 +159,6 @@ body {
     padding-right: var(--spacing-xl);
     animation: fadeIn 0.5s ease-out;
     transition: all var(--transition-base);
-}
-
-/* Main content when sidebar is collapsed */
-[data-testid="stSidebar"][aria-expanded="false"] ~ .main {
-    margin-left: 0 !important;
-}
-
-/* Main content when sidebar is expanded */
-[data-testid="stSidebar"][aria-expanded="true"] ~ .main {
-    margin-left: 0;
 }
 
 /* Center content wrapper */
@@ -209,30 +199,9 @@ h1, h2, h3, h4, h5, h6 {
     transition: all var(--transition-base);
 }
 
-/* Sidebar collapsed state */
-[data-testid="stSidebar"][aria-expanded="false"] {
-    min-width: 0;
-    max-width: 0;
-    overflow: hidden;
-}
-
-/* Sidebar expanded state */
-[data-testid="stSidebar"][aria-expanded="true"] {
-    min-width: 250px;
-    max-width: 350px;
-}
-
-/* Sidebar collapse button styling */
+/* Hide collapse button - sidebar always visible on desktop */
 [data-testid="collapsedControl"] {
-    background-color: var(--dark-bg);
-    border: 1px solid var(--dark-border);
-    border-radius: var(--radius-md);
-    transition: all var(--transition-base);
-}
-
-[data-testid="collapsedControl"]:hover {
-    background-color: var(--primary-color);
-    transform: scale(1.05);
+    display: none !important;
 }
 
 [data-testid="stSidebar"] h3 {
@@ -518,53 +487,82 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ================================================
-   RESPONSIVE DESIGN - MOBILE
+   MOBILE MENU TOGGLE (Mobile Only)
    ================================================ */
+.mobile-menu-toggle {
+    display: none;
+}
+
 @media (max-width: 768px) {
-    /* Adjust container padding */
-    .main .block-container {
-        padding-left: var(--spacing-md);
-        padding-right: var(--spacing-md);
-    }
-
-    /* Sidebar adjustments for mobile */
+    /* Hide sidebar by default on mobile */
     [data-testid="stSidebar"] {
-        min-width: 100%;
-        max-width: 100%;
-    }
-
-    [data-testid="stSidebar"][aria-expanded="true"] {
-        min-width: 100%;
-        max-width: 100%;
         position: fixed;
-        left: 0;
+        left: -100%;
         top: 0;
         bottom: 0;
-        z-index: 999;
+        width: 80%;
+        max-width: 300px;
+        min-width: 280px;
+        z-index: 1000;
+        transition: left var(--transition-base);
     }
 
-    [data-testid="stSidebar"][aria-expanded="false"] {
-        min-width: 0;
-        max-width: 0;
+    /* Show sidebar when menu is open */
+    [data-testid="stSidebar"].mobile-menu-open {
+        left: 0;
     }
 
-    /* Main content full width on mobile when sidebar is collapsed */
-    [data-testid="stSidebar"][aria-expanded="false"] ~ .main {
-        margin-left: 0 !important;
-        width: 100% !important;
-    }
-
-    /* Overlay effect when sidebar is open on mobile */
-    [data-testid="stSidebar"][aria-expanded="true"]::before {
-        content: '';
+    /* Mobile overlay */
+    .mobile-menu-overlay {
+        display: none;
         position: fixed;
         top: 0;
         left: 0;
         right: 0;
         bottom: 0;
         background: rgba(0, 0, 0, 0.5);
-        z-index: -1;
+        z-index: 999;
         animation: fadeIn 0.3s ease;
+    }
+
+    .mobile-menu-overlay.active {
+        display: block;
+    }
+
+    /* Show mobile menu button */
+    .mobile-menu-toggle {
+        display: block;
+        position: fixed;
+        top: 1rem;
+        left: 1rem;
+        z-index: 1001;
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: var(--radius-md);
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+        cursor: pointer;
+        box-shadow: var(--shadow-lg);
+        transition: all var(--transition-base);
+    }
+
+    .mobile-menu-toggle:hover {
+        background-color: var(--secondary-color);
+        transform: scale(1.05);
+    }
+
+    /* Adjust container padding */
+    .main .block-container {
+        padding-left: var(--spacing-md);
+        padding-right: var(--spacing-md);
+        padding-top: 4rem; /* Space for mobile menu button */
+    }
+
+    /* Main content full width on mobile */
+    .main {
+        margin-left: 0 !important;
+        width: 100% !important;
     }
 
     [data-testid="stSidebar"] .stButton button {
