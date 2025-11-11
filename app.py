@@ -353,10 +353,12 @@ def page_home():
         unsafe_allow_html=True,
     )
 
-    # Centered “Get Started” button
-    if st.button("Get Started →", key="home_start", use_container_width=True):
-        st.session_state.step = 1   # move to API‑key page
-        st.rerun()
+    # Centered "Get Started" button
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("Get Started →", key="home_start", use_container_width=True):
+            st.session_state.step = 1   # move to API‑key page
+            st.rerun()
 
 # -------------------------------------------------
 #  PAGE 1 – API KEY
@@ -406,7 +408,7 @@ def page_api_key():
         os.environ["OPENAI_API_KEY"] = api_key   # needed for OpenAIEmbeddings / ChatOpenAI
 
     # Forward button (disabled until a key is entered)
-    col_left, col_center, col_right = st.columns([1, 6, 1])
+    col_left, col_center, col_right = st.columns([1, 2, 1])
     with col_center:
         if st.button(
             "Continue →",
@@ -441,7 +443,7 @@ def page_upload():
         st.success("File uploaded – you can now continue.")
 
     # Forward button
-    col_left, col_center, col_right = st.columns([1, 6, 1])
+    col_left, col_center, col_right = st.columns([1, 2, 1])
     with col_center:
         if st.button(
             "Continue →",
@@ -485,7 +487,7 @@ def page_level():
     st.markdown("---")
 
     # Show different buttons based on RAG status
-    col_left, col_center, col_right = st.columns([1, 6, 1])
+    col_left, col_center, col_right = st.columns([1, 2, 1])
     with col_center:
         # If RAG exists, allow going to chat
         if st.session_state.rag is not None:
@@ -718,13 +720,13 @@ def page_chat():
 #  PAGE 6 – SETTINGS PAGE
 # -------------------------------------------------
 def page_settings():
-    st.markdown("## ⚙️ Settings & Management")
-    st.markdown("Manage your API key, sessions, and textbooks")
+    st.markdown("<h2 style='text-align: center;'>⚙️ Settings & Management</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center;'>Manage your API key, sessions, and textbooks</p>", unsafe_allow_html=True)
 
     st.markdown("---")
 
     # Section 1: API Key Management
-    st.markdown("### 🔑 API Key Management")
+    st.markdown("<h3 style='text-align: center;'>🔑 API Key Management</h3>", unsafe_allow_html=True)
 
     col1, col2 = st.columns([3, 1])
     with col1:
@@ -767,7 +769,7 @@ def page_settings():
     st.markdown("---")
 
     # Section 2: PDF Management
-    st.markdown("### 📚 Textbook Management")
+    st.markdown("<h3 style='text-align: center;'>📚 Textbook Management</h3>", unsafe_allow_html=True)
 
     rag_status = "✅ **Loaded**" if st.session_state.rag is not None else "❌ **Not Loaded**"
     st.info(f"RAG System Status: {rag_status}")
@@ -787,7 +789,7 @@ def page_settings():
     st.markdown("---")
 
     # Section 3: Session Management
-    st.markdown("### 💾 Session Management")
+    st.markdown("<h3 style='text-align: center;'>💾 Session Management</h3>", unsafe_allow_html=True)
 
     # Show session info
     session_info = f"""
@@ -823,7 +825,7 @@ def page_settings():
     st.markdown("---")
 
     # Section 4: Learning Level
-    st.markdown("### 🎯 Learning Level")
+    st.markdown("<h3 style='text-align: center;'>🎯 Learning Level</h3>", unsafe_allow_html=True)
 
     level = st.radio(
         "Select your preferred difficulty level:",
@@ -868,7 +870,8 @@ def main():
 
         /* Main content area responsiveness */
         .main .block-container {
-            max-width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
             padding-left: 2rem;
             padding-right: 2rem;
         }
@@ -878,6 +881,13 @@ def main():
                 padding-left: 1rem;
                 padding-right: 1rem;
             }
+        }
+
+        /* Center content wrapper */
+        .centered-content {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
         }
 
         /* Sidebar styling */
@@ -935,11 +945,35 @@ def main():
             border-radius: 8px;
             font-weight: 500;
             transition: all 0.3s ease;
+            max-width: 400px;
+            margin: 0 auto;
+            display: block;
         }
 
         .stButton button:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Center buttons container */
+        .stButton {
+            text-align: center;
+        }
+
+        /* Headers centered */
+        .main h1, .main h2, .main h3 {
+            text-align: center;
+        }
+
+        /* Markdown text centered for specific sections */
+        .main .stMarkdown {
+            text-align: center;
+        }
+
+        /* Info/warning/error boxes */
+        .stAlert {
+            max-width: 800px;
+            margin: 1rem auto;
         }
 
         /* Input styling */
@@ -960,6 +994,11 @@ def main():
         }
 
         /* Radio button styling */
+        .stRadio {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
         .stRadio > div {
             background-color: white;
             padding: 1rem;
@@ -968,11 +1007,22 @@ def main():
         }
 
         /* File uploader styling */
+        .stFileUploader {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
         [data-testid="stFileUploader"] {
             background-color: white;
             border-radius: 12px;
             padding: 2rem;
             border: 2px dashed #cbd5e0;
+        }
+
+        /* Text input centering */
+        .stTextInput {
+            max-width: 500px;
+            margin: 0 auto;
         }
 
         /* Markdown headers */
@@ -1026,6 +1076,26 @@ def main():
         .stExpander {
             background-color: white;
             border-radius: 8px;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        /* Column layout improvements */
+        [data-testid="column"] {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Improve spacing */
+        .element-container {
+            margin-bottom: 1rem;
+        }
+
+        /* Progress bar container */
+        .stProgress {
+            max-width: 600px;
+            margin: 0 auto;
         }
         </style>
     """, unsafe_allow_html=True)
