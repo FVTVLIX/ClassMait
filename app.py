@@ -720,6 +720,10 @@ def page_chat():
 #  PAGE 6 – SETTINGS PAGE
 # -------------------------------------------------
 def page_settings():
+    # Initialize confirmation flag
+    if "confirm_clear" not in st.session_state:
+        st.session_state.confirm_clear = False
+
     st.markdown("<h2 style='text-align: center;'>⚙️ Settings & Management</h2>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center;'>Manage your API key, sessions, and textbooks</p>", unsafe_allow_html=True)
 
@@ -810,16 +814,35 @@ def page_settings():
                 st.error("❌ Failed to save session")
 
     with col2:
-        if st.button("🗑️ Clear All Data", use_container_width=True, type="secondary"):
-            if st.button("⚠️ Confirm Clear All", use_container_width=True, type="secondary"):
-                if clear_session_data():
-                    # Reset session state
-                    for key in ["chat_threads", "current_thread_id", "api_key", "rag", "uploaded_path", "pdf_bytes"]:
+        if not st.session_state.confirm_clear:
+            if st.button("🗑️ Clear All Data", use_container_width=True, type="secondary"):
+                st.session_state.confirm_clear = True
+                st.rerun()
+        else:
+            # Show confirmation buttons
+            st.warning("⚠️ Are you sure? This will delete everything!")
+            col_yes, col_no = st.columns(2)
+
+            with col_yes:
+                if st.button("✅ Yes, Clear All", use_container_width=True, type="primary"):
+                    # Clear the session file
+                    clear_session_data()
+
+                    # Reset session state keys
+                    keys_to_clear = ["chat_threads", "current_thread_id", "api_key", "rag",
+                                     "uploaded_path", "pdf_bytes", "confirm_clear", "messages"]
+                    for key in keys_to_clear:
                         if key in st.session_state:
-                            del st.session_state[key]
+                            st.session_state[key] = [] if key in ["chat_threads", "messages"] else None
+
                     st.success("All data cleared!")
                     time.sleep(1)
                     st.session_state.step = 0
+                    st.rerun()
+
+            with col_no:
+                if st.button("❌ Cancel", use_container_width=True, type="secondary"):
+                    st.session_state.confirm_clear = False
                     st.rerun()
 
     st.markdown("---")
