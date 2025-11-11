@@ -86,7 +86,7 @@ from rag_system import RAGSystem   # <-- keep this file unchanged except for opt
 #  Session‑state defaults (run only once per session)
 # -------------------------------------------------
 if "step" not in st.session_state:
-    st.session_state.step = 0               # 0=home, 1=api, 2=upload, 3=level, 4=process, 5=chat
+    st.session_state.step = 0               # 0=home, 1=api, 2=upload, 3=level, 4=process, 5=chat, 6=settings
 
 if "api_key" not in st.session_state:
     st.session_state.api_key = ""
@@ -482,31 +482,6 @@ def page_level():
     )
     st.session_state.level = level
 
-    # Session management section
-    st.markdown("---")
-    st.markdown("### 🔧 Session Management")
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        if st.button("💾 Save Session", use_container_width=True):
-            if save_session_state():
-                st.success("Session saved successfully!")
-            else:
-                st.error("Failed to save session")
-
-    with col2:
-        if st.button("🗑️ Clear All Data", use_container_width=True, type="secondary"):
-            if clear_session_data():
-                # Reset session state
-                for key in ["chat_threads", "current_thread_id", "api_key", "rag"]:
-                    if key in st.session_state:
-                        del st.session_state[key]
-                st.success("All data cleared!")
-                time.sleep(1)
-                st.session_state.step = 0
-                st.rerun()
-
     st.markdown("---")
 
     # Show different buttons based on RAG status
@@ -678,7 +653,7 @@ def page_chat():
         # Settings footer
         st.markdown("---")
         if st.button("⚙️ Settings", key="settings_btn", use_container_width=True):
-            st.session_state.step = 3
+            st.session_state.step = 6
             st.rerun()
 
     # Main chat area - Navigation bar
@@ -735,6 +710,147 @@ def page_chat():
         # Reset processing flag
         st.session_state.processing_response = False
         st.rerun()
+
+# -------------------------------------------------
+#  PAGE 6 – SETTINGS PAGE
+# -------------------------------------------------
+def page_settings():
+    st.markdown("## ⚙️ Settings & Management")
+    st.markdown("Manage your API key, sessions, and textbooks")
+
+    st.markdown("---")
+
+    # Section 1: API Key Management
+    st.markdown("### 🔑 API Key Management")
+
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        current_key = st.session_state.get("api_key", "")
+        display_key = current_key[:15] + "..." if len(current_key) > 15 else current_key
+        if current_key:
+            st.info(f"**Current API Key:** `{display_key}`")
+        else:
+            st.warning("**No API key set**")
+
+    with col2:
+        if current_key and st.button("🗑️ Remove Key", use_container_width=True):
+            st.session_state.api_key = ""
+            if "OPENAI_API_KEY" in os.environ:
+                del os.environ["OPENAI_API_KEY"]
+            save_session_state()
+            st.success("API key removed!")
+            time.sleep(1)
+            st.rerun()
+
+    # Update API key
+    with st.expander("🔄 Update API Key"):
+        new_api_key = st.text_input(
+            "Enter new API key",
+            type="password",
+            placeholder="sk-...",
+            key="new_api_key_input"
+        )
+        if st.button("Update API Key", type="primary"):
+            if new_api_key:
+                st.session_state.api_key = new_api_key
+                os.environ["OPENAI_API_KEY"] = new_api_key
+                save_session_state()
+                st.success("✅ API key updated successfully!")
+                time.sleep(1)
+                st.rerun()
+            else:
+                st.error("Please enter a valid API key")
+
+    st.markdown("---")
+
+    # Section 2: PDF Management
+    st.markdown("### 📚 Textbook Management")
+
+    rag_status = "✅ **Loaded**" if st.session_state.rag is not None else "❌ **Not Loaded**"
+    st.info(f"RAG System Status: {rag_status}")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("📤 Upload New PDF", use_container_width=True, type="primary"):
+            st.session_state.step = 2
+            st.rerun()
+
+    with col2:
+        if st.session_state.rag is not None:
+            st.success("PDF is processed and ready")
+        else:
+            st.warning("No PDF loaded")
+
+    st.markdown("---")
+
+    # Section 3: Session Management
+    st.markdown("### 💾 Session Management")
+
+    # Show session info
+    session_info = f"""
+    - **Chat Threads:** {len(st.session_state.get('chat_threads', []))}
+    - **Current Level:** {st.session_state.get('level', 'Beginner')}
+    - **API Key Set:** {'Yes' if st.session_state.get('api_key') else 'No'}
+    """
+    st.info(session_info)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("💾 Save Session", use_container_width=True):
+            if save_session_state():
+                st.success("✅ Session saved successfully!")
+                time.sleep(1)
+            else:
+                st.error("❌ Failed to save session")
+
+    with col2:
+        if st.button("🗑️ Clear All Data", use_container_width=True, type="secondary"):
+            if st.button("⚠️ Confirm Clear All", use_container_width=True, type="secondary"):
+                if clear_session_data():
+                    # Reset session state
+                    for key in ["chat_threads", "current_thread_id", "api_key", "rag", "uploaded_path", "pdf_bytes"]:
+                        if key in st.session_state:
+                            del st.session_state[key]
+                    st.success("All data cleared!")
+                    time.sleep(1)
+                    st.session_state.step = 0
+                    st.rerun()
+
+    st.markdown("---")
+
+    # Section 4: Learning Level
+    st.markdown("### 🎯 Learning Level")
+
+    level = st.radio(
+        "Select your preferred difficulty level:",
+        ("Beginner", "Intermediate", "Expert"),
+        index=("Beginner", "Intermediate", "Expert").index(st.session_state.level),
+        key="settings_level_radio",
+        horizontal=True
+    )
+
+    if level != st.session_state.level:
+        st.session_state.level = level
+        save_session_state()
+        st.success(f"Level updated to {level}")
+
+    st.markdown("---")
+
+    # Navigation buttons
+    col1, col2, col3 = st.columns([1, 2, 1])
+
+    with col2:
+        if st.session_state.rag is not None:
+            if st.button("💬 Continue to Chat", use_container_width=True, type="primary"):
+                st.session_state.step = 5
+                st.rerun()
+        else:
+            st.warning("⚠️ Please upload and process a PDF before chatting")
+            if st.button("📚 Go to Upload", use_container_width=True, type="primary"):
+                st.session_state.step = 2
+                st.rerun()
+
 # -------------------------------------------------
 #  MAIN ROUTER
 # -------------------------------------------------
@@ -880,6 +996,8 @@ def main():
         page_processing()
     elif step == 5:
         page_chat()
+    elif step == 6:
+        page_settings()
     else:
         st.error("Invalid step – resetting.")
         st.session_state.step = 0
