@@ -59,6 +59,7 @@
 #  app.py
 # -------------------------------------------------
 import os
+from pydoc import classname
 import time
 import tempfile
 import json
@@ -71,8 +72,8 @@ from pathlib import Path
 #  Page Configuration (must be first Streamlit command)
 # -------------------------------------------------
 st.set_page_config(
-    page_title="ClassMateAI - Your Learning Assistant",
-    page_icon="🧠",
+    page_title="ClassMait - Your Learning Assistant",
+    # page_icon="🧠",
     layout="wide",
     initial_sidebar_state="auto",
 )
@@ -80,19 +81,23 @@ st.set_page_config(
 # -------------------------------------------------
 #  Your own RAG wrapper (make sure it works with the API key)
 # -------------------------------------------------
-from rag_system import RAGSystem   # <-- keep this file unchanged except for optional api_key param
+from rag_system import (
+    RAGSystem,
+)  # <-- keep this file unchanged except for optional api_key param
 
 # -------------------------------------------------
 #  Session‑state defaults (run only once per session)
 # -------------------------------------------------
 if "step" not in st.session_state:
-    st.session_state.step = 0               # 0=home, 1=api, 2=upload, 3=level, 4=process, 5=chat, 6=settings
+    st.session_state.step = (
+        0  # 0=home, 1=api, 2=upload, 3=level, 4=process, 5=chat, 6=settings
+    )
 
 if "api_key" not in st.session_state:
     st.session_state.api_key = ""
 
 if "uploaded_path" not in st.session_state:
-    st.session_state.uploaded_path = None   # absolute path string
+    st.session_state.uploaded_path = None  # absolute path string
 
 if "pdf_bytes" not in st.session_state:
     st.session_state.pdf_bytes = None
@@ -105,14 +110,19 @@ if "rag" not in st.session_state:
 
 # NEW: Chat history management
 if "chat_threads" not in st.session_state:
-    st.session_state.chat_threads = []      # list of thread objects: {"id": str, "title": str, "timestamp": str, "messages": []}
+    st.session_state.chat_threads = (
+        []
+    )  # list of thread objects: {"id": str, "title": str, "timestamp": str, "messages": []}
 
 if "current_thread_id" not in st.session_state:
     st.session_state.current_thread_id = None
 
 # DEPRECATED: Keep for backward compatibility, but we'll use chat_threads now
 if "messages" not in st.session_state:
-    st.session_state.messages = []          # list of dicts: {"role": "user"/"assistant", "content": "..."} 
+    st.session_state.messages = (
+        []
+    )  # list of dicts: {"role": "user"/"assistant", "content": "..."}
+
 
 # -------------------------------------------------
 #  Helper: write uploaded file to a *named* temp file
@@ -127,10 +137,12 @@ def save_uploaded_file(uploaded_file) -> str:
         tmp.write(uploaded_file.getvalue())
         return tmp.name  # <-- returns something like /var/folders/.../tmpabcd1234.pdf
 
+
 # -------------------------------------------------
 #  Session Persistence Helper Functions
 # -------------------------------------------------
 SESSION_FILE = "session_state.json"
+
 
 def save_session_state():
     """Saves important session state to a JSON file."""
@@ -143,7 +155,8 @@ def save_session_state():
             "step": st.session_state.get("step", 0),
             "pdf_bytes": None,  # Don't save PDF bytes - too large
             "uploaded_path": None,  # Don't save temp paths
-            "rag_initialized": st.session_state.rag is not None,  # Track if RAG was set up
+            "rag_initialized": st.session_state.rag
+            is not None,  # Track if RAG was set up
         }
 
         with open(SESSION_FILE, "w") as f:
@@ -152,6 +165,7 @@ def save_session_state():
     except Exception as e:
         print(f"Error saving session state: {e}")
         return False
+
 
 def load_session_state():
     """Loads session state from JSON file if it exists."""
@@ -167,7 +181,9 @@ def load_session_state():
             st.session_state.api_key = saved_state.get("api_key", "")
             st.session_state.level = saved_state.get("level", "Beginner")
             st.session_state.chat_threads = saved_state.get("chat_threads", [])
-            st.session_state.current_thread_id = saved_state.get("current_thread_id", None)
+            st.session_state.current_thread_id = saved_state.get(
+                "current_thread_id", None
+            )
 
             # If we have an API key and chat history, skip to chat page
             # BUT only if RAG was initialized (otherwise go to upload page)
@@ -192,10 +208,11 @@ def load_session_state():
         print(f"Error loading session state: {e}")
         return False
 
+
 def load_api_key_from_secrets():
     """Loads API key from Streamlit secrets if available."""
     try:
-        if hasattr(st, 'secrets') and "OPENAI_API_KEY" in st.secrets:
+        if hasattr(st, "secrets") and "OPENAI_API_KEY" in st.secrets:
             api_key = st.secrets["OPENAI_API_KEY"]
             if api_key and api_key != "sk-your-api-key-here":
                 st.session_state.api_key = api_key
@@ -204,6 +221,7 @@ def load_api_key_from_secrets():
     except Exception as e:
         pass
     return False
+
 
 def clear_session_data():
     """Clears saved session data."""
@@ -215,6 +233,7 @@ def clear_session_data():
         print(f"Error clearing session data: {e}")
         return False
 
+
 # -------------------------------------------------
 #  Chat History Helper Functions
 # -------------------------------------------------
@@ -225,7 +244,7 @@ def create_new_thread():
         "id": thread_id,
         "title": "New Conversation",
         "timestamp": datetime.now().isoformat(),
-        "messages": []
+        "messages": [],
     }
     st.session_state.chat_threads.insert(0, new_thread)  # Add to beginning
     st.session_state.current_thread_id = thread_id
@@ -233,6 +252,7 @@ def create_new_thread():
     # Keep only last 10 threads
     if len(st.session_state.chat_threads) > 10:
         st.session_state.chat_threads = st.session_state.chat_threads[:10]
+
 
 def get_current_thread():
     """Returns the current active thread, or creates one if none exists."""
@@ -247,13 +267,17 @@ def get_current_thread():
     create_new_thread()
     return get_current_thread()
 
+
 def switch_thread(thread_id):
     """Switches to a different chat thread."""
     st.session_state.current_thread_id = thread_id
 
+
 def delete_thread(thread_id):
     """Deletes a chat thread."""
-    st.session_state.chat_threads = [t for t in st.session_state.chat_threads if t["id"] != thread_id]
+    st.session_state.chat_threads = [
+        t for t in st.session_state.chat_threads if t["id"] != thread_id
+    ]
 
     # If we deleted the current thread, create a new one
     if st.session_state.current_thread_id == thread_id:
@@ -262,10 +286,14 @@ def delete_thread(thread_id):
         else:
             create_new_thread()
 
+
 def update_thread_title(thread, first_message):
     """Updates thread title based on first message (truncate to 30 chars)."""
     if thread["title"] == "New Conversation" and first_message:
-        thread["title"] = first_message[:30] + "..." if len(first_message) > 30 else first_message
+        thread["title"] = (
+            first_message[:30] + "..." if len(first_message) > 30 else first_message
+        )
+
 
 def format_timestamp(iso_timestamp):
     """Formats ISO timestamp to readable format."""
@@ -282,11 +310,12 @@ def format_timestamp(iso_timestamp):
     else:
         return dt.strftime("%b %d, %Y")
 
+
 # -------------------------------------------------
 #  Navigation bar (appears at the top of every page except home)
 # -------------------------------------------------
 def nav_bar():
-    col_left, col_center, col_right = st.columns([1, 6, 1])
+    col_left, col_center, col_right = st.columns([1, 5, 1])
 
     # ← Back button (disabled on the very first step)
     with col_left:
@@ -295,19 +324,20 @@ def nav_bar():
                 st.session_state.step -= 1
                 st.rerun()
         else:
-            st.write("")   # placeholder for layout symmetry
+            st.write("")  # placeholder for layout symmetry
 
     # Step indicator (center)
     with col_center:
         st.markdown(
-            f"<h4 style='text-align:center; margin:0;'>Step {st.session_state.step + 1} of 6</h4>",
+            f"<h4 class='step-indicator'>Step {st.session_state.step + 1} of 6</h4>",
             unsafe_allow_html=True,
         )
 
     # Right side empty (keeps layout balanced)
-    with col_right:
-        st.write("")
-    st.markdown("---")
+    # with col_right:
+    #     st.write("")
+    # st.markdown("---")
+
 
 # -------------------------------------------------
 #  PAGE 0 – HOME
@@ -329,22 +359,10 @@ def page_home():
 
     st.markdown(
         """
-        <div style="text-align:center;">
-            <h1 style="font-size:3rem;
-                       background:linear-gradient(135deg,#6a11cb,#2575fc);
-                       -webkit-background-clip:text;
-                       -webkit-text-fill-color:transparent;">
-                ClassMateAI
-            </h1>
-            <p style="font-size:1.3rem; color:#4a5568;">
-                Your Personal AI Learning Assistant
-            </p>
-            <div style="height:250px; margin:1rem auto;
-                        display:flex; align-items:center; justify-content:center;
-                        background:#f0f4ff; border-radius:15px;">
-                <p style="color:#6a11cb;">[Animation placeholder]</p>
-            </div>
-            <p style="font-size:1.1rem; max-width:800px; margin:0 auto;">
+        <div class="home-container">
+            <h1 class="title">Classmait</h1>
+            <p class="subtitle">Your Personal AI Learning Assistant</p>
+            <p class="home-description">
                 Transform any textbook into an interactive learning experience
                 with personalized explanations and quizzes.
             </p>
@@ -357,8 +375,9 @@ def page_home():
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         if st.button("Get Started →", key="home_start", use_container_width=True):
-            st.session_state.step = 1   # move to API‑key page
+            st.session_state.step = 1  # move to API‑key page
             st.rerun()
+
 
 # -------------------------------------------------
 #  PAGE 1 – API KEY
@@ -369,30 +388,43 @@ def page_api_key():
     # Check for API key from secrets
     if not st.session_state.api_key:
         if load_api_key_from_secrets():
-            st.success("✅ API key loaded from secrets.toml!")
+            st.success("API key loaded from secrets.toml!")
 
     st.markdown(
         """
-        ## 🔑 OpenAI API Key
-        Enter your OpenAI API key so the assistant can call GPT‑4.
-        You can create a key at
-        <a href="https://platform.openai.com/account/api-keys" target="_blank">
-        platform.openai.com/account/api-keys</a>.
+        <div class="api-key-container">
+            <h2 class="api-key-title">OpenAI API Key</h2>
+            <p class="api-key-description">Enter your OpenAI API key so the assistant can call GPT‑4.</p>
+            <p class="api-key-description-link">You can create a key at
+            <a href="https://platform.openai.com/account/api-keys" target="_blank">
+            platform.openai.com/account/api-keys</a>.</p>
+        </div>
         """,
         unsafe_allow_html=True,
     )
 
     # Show info about using secrets.toml
-    with st.expander("💡 Tip: Save your API key permanently"):
-        st.markdown("""
-        To avoid re-entering your API key every time:
-        1. Open `.streamlit/secrets.toml` in your project directory
-        2. Uncomment the `OPENAI_API_KEY` line
-        3. Replace `"sk-your-api-key-here"` with your actual API key
-        4. Save the file and restart the app
+    with st.expander("Tip: Save your API key permanently!"):
+        st.markdown(
+            """
+            To avoid re-entering your API key every time:
+            1. Open `.streamlit/secrets.toml` in your project directory
+            2. Uncomment the `OPENAI_API_KEY` line
+            3. Replace `"sk-your-api-key-here"` with your actual API key
+            4. Save the file and restart the app
+            Your API key will be automatically loaded on startup!
+            """,
+            unsafe_allow_html=True,
+        )
 
-        Your API key will be automatically loaded on startup!
-        """)
+    st.markdown(
+        """
+        <div class="api-key-below">
+        <p>Enter your API key below to continue.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     api_key = st.text_input(
         "API Key",
@@ -405,7 +437,9 @@ def page_api_key():
     # Save the key as soon as the user types it
     if api_key:
         st.session_state.api_key = api_key
-        os.environ["OPENAI_API_KEY"] = api_key   # needed for OpenAIEmbeddings / ChatOpenAI
+        os.environ["OPENAI_API_KEY"] = (
+            api_key  # needed for OpenAIEmbeddings / ChatOpenAI
+        )
 
     # Forward button (disabled until a key is entered)
     col_left, col_center, col_right = st.columns([1, 2, 1])
@@ -417,8 +451,9 @@ def page_api_key():
             use_container_width=True,
         ):
             save_session_state()  # Save progress
-            st.session_state.step = 2   # go to upload page
+            st.session_state.step = 2  # go to upload page
             st.rerun()
+
 
 # -------------------------------------------------
 #  PAGE 2 – UPLOAD PDF
@@ -436,10 +471,10 @@ def page_upload():
         # Save to a *named* temporary file
         tmp_path = save_uploaded_file(uploaded)
         st.session_state.uploaded_path = tmp_path
-        
+
         # NEW: Store the PDF bytes for later re-creation
         st.session_state.pdf_bytes = uploaded.getvalue()  # ← Add this line
-        
+
         st.success("File uploaded – you can now continue.")
 
     # Forward button
@@ -453,6 +488,7 @@ def page_upload():
         ):
             st.session_state.step = 3
             st.rerun()
+
 
 # -------------------------------------------------
 #  PAGE 3 – SELECT LEARNING LEVEL
@@ -491,30 +527,42 @@ def page_level():
     with col_center:
         # If RAG exists, allow going to chat
         if st.session_state.rag is not None:
-            if st.button("Continue to Chat →", key="goto_chat", use_container_width=True, type="primary"):
+            if st.button(
+                "Continue to Chat →",
+                key="goto_chat",
+                use_container_width=True,
+                type="primary",
+            ):
                 save_session_state()
                 st.session_state.step = 5
                 st.rerun()
         # Otherwise, need to process textbook
         elif st.session_state.uploaded_path or st.session_state.pdf_bytes:
-            if st.button("Process Textbook →", key="process_start", use_container_width=True):
+            if st.button(
+                "Process Textbook →", key="process_start", use_container_width=True
+            ):
                 save_session_state()  # Save before processing
-                st.session_state.step = 4   # go to processing page
+                st.session_state.step = 4  # go to processing page
                 st.rerun()
         else:
-            if st.button("Upload Textbook →", key="goto_upload", use_container_width=True):
+            if st.button(
+                "Upload Textbook →", key="goto_upload", use_container_width=True
+            ):
                 st.session_state.step = 2
                 st.rerun()
+
 
 # -------------------------------------------------
 #  PAGE 4 – PROCESSING (the step that used to error)
 # -------------------------------------------------
 def page_processing():
     nav_bar()
-    
+
     # NEW: Re-create PDF file if it was deleted
-    if (st.session_state.uploaded_path and 
-        not Path(st.session_state.uploaded_path).is_file()):
+    if (
+        st.session_state.uploaded_path
+        and not Path(st.session_state.uploaded_path).is_file()
+    ):
         # File was deleted, re-create it from stored bytes
         with open(st.session_state.uploaded_path, "wb") as f:
             f.write(st.session_state.pdf_bytes)
@@ -523,7 +571,7 @@ def page_processing():
     # Continue with normal processing...
     st.markdown("## ⏳ Processing Your Textbook")
     st.markdown("Extracting, embedding and indexing your content.")
-    
+
     progress = st.progress(0)
     status = st.empty()
 
@@ -541,7 +589,7 @@ def page_processing():
     # 3️⃣ Ingest PDF
     status.markdown("📄 Reading and chunking PDF…")
     progress.progress(35)
-    
+
     pdf_path = st.session_state.uploaded_path
     rag.ingest_pdf(pdf_path)
     time.sleep(0.5)
@@ -566,6 +614,7 @@ def page_processing():
     time.sleep(1)
     st.session_state.step = 5
     st.rerun()
+
 
 # -------------------------------------------------
 #  PAGE 5 – CHAT INTERFACE WITH HISTORY SIDEBAR
@@ -593,11 +642,15 @@ def page_chat():
 
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            if st.button("📚 Go to Upload & Process", use_container_width=True, type="primary"):
+            if st.button(
+                "📚 Go to Upload & Process", use_container_width=True, type="primary"
+            ):
                 st.session_state.step = 2
                 st.rerun()
 
-        st.info("💡 **Tip:** Your chat history has been preserved and will be available after processing.")
+        st.info(
+            "💡 **Tip:** Your chat history has been preserved and will be available after processing."
+        )
         st.stop()  # Stop execution here to prevent the error
 
     # Get current thread
@@ -640,7 +693,9 @@ def page_chat():
 
                     with col2:
                         # Delete button (small)
-                        if st.button("🗑️", key=f"delete_{thread['id']}", help="Delete chat"):
+                        if st.button(
+                            "🗑️", key=f"delete_{thread['id']}", help="Delete chat"
+                        ):
                             delete_thread(thread["id"])
                             save_session_state()  # Save after deleting
                             st.rerun()
@@ -648,7 +703,7 @@ def page_chat():
                     # Show timestamp with smaller font
                     st.markdown(
                         f"<p style='color: #94a3b8; font-size: 0.75rem; margin-top: -0.5rem;'>{format_timestamp(thread['timestamp'])}</p>",
-                        unsafe_allow_html=True
+                        unsafe_allow_html=True,
                     )
 
                 st.markdown("---")
@@ -696,17 +751,20 @@ def page_chat():
         st.rerun()
 
     # Process response if needed
-    if (st.session_state.processing_response and
-        current_thread["messages"] and
-        current_thread["messages"][-1]["role"] == "user"):
+    if (
+        st.session_state.processing_response
+        and current_thread["messages"]
+        and current_thread["messages"][-1]["role"] == "user"
+    ):
 
         with st.chat_message("assistant"):
             with st.spinner("Thinking…"):
                 answer = st.session_state.rag.get_answer(
-                    current_thread["messages"][-1]["content"],
-                    st.session_state.level
+                    current_thread["messages"][-1]["content"], st.session_state.level
                 )
-                current_thread["messages"].append({"role": "assistant", "content": answer})
+                current_thread["messages"].append(
+                    {"role": "assistant", "content": answer}
+                )
                 st.markdown(answer)
 
         # Auto-save after getting response
@@ -716,6 +774,7 @@ def page_chat():
         st.session_state.processing_response = False
         st.rerun()
 
+
 # -------------------------------------------------
 #  PAGE 6 – SETTINGS PAGE
 # -------------------------------------------------
@@ -724,13 +783,22 @@ def page_settings():
     if "confirm_clear" not in st.session_state:
         st.session_state.confirm_clear = False
 
-    st.markdown("<h2 style='text-align: center;'>⚙️ Settings & Management</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center;'>Manage your API key, sessions, and textbooks</p>", unsafe_allow_html=True)
+    st.markdown(
+        "<h2 style='text-align: center;'>⚙️ Settings & Management</h2>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        "<p style='text-align: center;'>Manage your API key, sessions, and textbooks</p>",
+        unsafe_allow_html=True,
+    )
 
     st.markdown("---")
 
     # Section 1: API Key Management
-    st.markdown("<h3 style='text-align: center;'>🔑 API Key Management</h3>", unsafe_allow_html=True)
+    st.markdown(
+        "<h3 style='text-align: center;'>🔑 API Key Management</h3>",
+        unsafe_allow_html=True,
+    )
 
     col1, col2 = st.columns([3, 1])
     with col1:
@@ -757,7 +825,7 @@ def page_settings():
             "Enter new API key",
             type="password",
             placeholder="sk-...",
-            key="new_api_key_input"
+            key="new_api_key_input",
         )
         if st.button("Update API Key", type="primary"):
             if new_api_key:
@@ -773,9 +841,14 @@ def page_settings():
     st.markdown("---")
 
     # Section 2: PDF Management
-    st.markdown("<h3 style='text-align: center;'>📚 Textbook Management</h3>", unsafe_allow_html=True)
+    st.markdown(
+        "<h3 style='text-align: center;'>📚 Textbook Management</h3>",
+        unsafe_allow_html=True,
+    )
 
-    rag_status = "✅ **Loaded**" if st.session_state.rag is not None else "❌ **Not Loaded**"
+    rag_status = (
+        "✅ **Loaded**" if st.session_state.rag is not None else "❌ **Not Loaded**"
+    )
     st.info(f"RAG System Status: {rag_status}")
 
     col1, col2 = st.columns(2)
@@ -793,7 +866,10 @@ def page_settings():
     st.markdown("---")
 
     # Section 3: Session Management
-    st.markdown("<h3 style='text-align: center;'>💾 Session Management</h3>", unsafe_allow_html=True)
+    st.markdown(
+        "<h3 style='text-align: center;'>💾 Session Management</h3>",
+        unsafe_allow_html=True,
+    )
 
     # Show session info
     session_info = f"""
@@ -815,7 +891,9 @@ def page_settings():
 
     with col2:
         if not st.session_state.confirm_clear:
-            if st.button("🗑️ Clear All Data", use_container_width=True, type="secondary"):
+            if st.button(
+                "🗑️ Clear All Data", use_container_width=True, type="secondary"
+            ):
                 st.session_state.confirm_clear = True
                 st.rerun()
         else:
@@ -824,16 +902,28 @@ def page_settings():
             col_yes, col_no = st.columns(2)
 
             with col_yes:
-                if st.button("✅ Yes, Clear All", use_container_width=True, type="primary"):
+                if st.button(
+                    "✅ Yes, Clear All", use_container_width=True, type="primary"
+                ):
                     # Clear the session file
                     clear_session_data()
 
                     # Reset session state keys
-                    keys_to_clear = ["chat_threads", "current_thread_id", "api_key", "rag",
-                                     "uploaded_path", "pdf_bytes", "confirm_clear", "messages"]
+                    keys_to_clear = [
+                        "chat_threads",
+                        "current_thread_id",
+                        "api_key",
+                        "rag",
+                        "uploaded_path",
+                        "pdf_bytes",
+                        "confirm_clear",
+                        "messages",
+                    ]
                     for key in keys_to_clear:
                         if key in st.session_state:
-                            st.session_state[key] = [] if key in ["chat_threads", "messages"] else None
+                            st.session_state[key] = (
+                                [] if key in ["chat_threads", "messages"] else None
+                            )
 
                     st.success("All data cleared!")
                     time.sleep(1)
@@ -848,14 +938,16 @@ def page_settings():
     st.markdown("---")
 
     # Section 4: Learning Level
-    st.markdown("<h3 style='text-align: center;'>🎯 Learning Level</h3>", unsafe_allow_html=True)
+    st.markdown(
+        "<h3 style='text-align: center;'>🎯 Learning Level</h3>", unsafe_allow_html=True
+    )
 
     level = st.radio(
         "Select your preferred difficulty level:",
         ("Beginner", "Intermediate", "Expert"),
         index=("Beginner", "Intermediate", "Expert").index(st.session_state.level),
         key="settings_level_radio",
-        horizontal=True
+        horizontal=True,
     )
 
     if level != st.session_state.level:
@@ -870,7 +962,9 @@ def page_settings():
 
     with col2:
         if st.session_state.rag is not None:
-            if st.button("💬 Continue to Chat", use_container_width=True, type="primary"):
+            if st.button(
+                "💬 Continue to Chat", use_container_width=True, type="primary"
+            ):
                 st.session_state.step = 5
                 st.rerun()
         else:
@@ -878,6 +972,7 @@ def page_settings():
             if st.button("📚 Go to Upload", use_container_width=True, type="primary"):
                 st.session_state.step = 2
                 st.rerun()
+
 
 # -------------------------------------------------
 #  MAIN ROUTER
@@ -911,6 +1006,7 @@ def main():
         st.error("Invalid step – resetting.")
         st.session_state.step = 0
         st.rerun()
+
 
 if __name__ == "__main__":
     main()

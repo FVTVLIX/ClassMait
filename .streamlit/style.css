@@ -6,13 +6,14 @@
    FONT IMPORTS
    ================================================ */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700;800&family=Roboto:wght@300;400;500;700&display=swap');
-
+@import url('https://fonts.googleapis.com/css2?family=Stack+Sans+Headline:wght@200..700&display=swap" rel="stylesheet');
 /* ================================================
    CSS VARIABLES
    ================================================ */
 :root {
     /* Colors */
     --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --primary-background: #F8F8F8;
     --primary-color: #667eea;
     --secondary-color: #764ba2;
     --dark-bg: #1e1e2e;
@@ -52,7 +53,7 @@
     --transition-slow: 0.5s ease;
 
     /* Font Families */
-    --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-primary: 'Stack Sans Headline', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     --font-headings: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     --font-mono: 'Roboto Mono', 'Courier New', monospace;
 }
@@ -130,7 +131,7 @@
 }
 
 body {
-    font-family: var(--font-primary);
+    /* font-family: var(--font-primary); */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
@@ -141,10 +142,70 @@ body {
 }
 
 /* ================================================
+   HOME PAGE
+   ================================================ */
+.home-container {
+    text-align: center;
+    font-family: var(--font-primary);
+}
+
+.home-container .title {
+    color: var(--text-primary);
+    font-family: var(--font-primary);
+    font-size: 8rem;
+    text-transform: uppercase;
+}
+
+.home-container .subtitle {
+    color: var(--text-secondary);
+    font-size: 2rem;
+}
+
+/* ================================================
+   API KEY PAGE
+   ================================================ */
+.api-key-container {
+    text-align: center;
+    font-family: var(--font-primary);
+}
+
+.api-key-container .api-key-title {
+    color: var(--text-primary);
+    font-size: 7rem;
+    font-family: var(--font-primary);
+}
+
+.api-key-container .api-key-description {
+    color: var(--text-secondary);
+    font-size: 1.5rem;
+    font-family: var(--font-primary);
+}
+
+.api-key-container .api-key-description-link {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-family: var(--font-primary);
+}
+
+.api-key-container .api-key-tip-title {
+    color: var(--text-primary);
+    font-size: 1.5rem;
+    font-family: var(--font-primary);
+}
+
+.api-key-below {
+    color: var(--text-secondary);
+    font-size: .9rem;
+    font-family: var(--font-primary);
+    text-align: center;
+    margin-top: var(--spacing-md);
+}
+
+/* ================================================
    MAIN CONTAINER
    ================================================ */
 .stApp {
-    background: var(--primary-gradient);
+    background: var(--primary-background);
     min-height: 100vh;
 }
 
@@ -163,6 +224,16 @@ body {
     padding: var(--spacing-xl);
 }
 
+/* Step indicator */
+.st-emotion-cache-467cry h4 {
+    color: var(--text-primary);
+    font-family: var(--font-primary);
+    font-size: 2rem;
+    font-weight: 600;
+    text-align: center;
+    margin: 0;
+}
+
 /* ================================================
    TYPOGRAPHY
    ================================================ */
@@ -179,6 +250,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .main .stMarkdown {
     text-align: center;
+
 }
 
 /* ================================================
@@ -244,8 +316,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .stButton button:hover {
-    transform: translateY(-2px);
+    /* transform: translateY(-2px); */
     box-shadow: var(--shadow-lg);
+    color: var(--text-primary);
 }
 
 .stButton button:active {
@@ -256,6 +329,13 @@ h1, h2, h3, h4, h5, h6 {
     text-align: center;
 }
 
+/* HOME Getting Started button */
+.st-emotion-cache-1anq8dj {
+    width: 100%;
+    color: var(--white);
+    background-color: var(--text-primary);
+
+}
 /* Button animations */
 .stButton button {
     animation: scaleIn var(--transition-base);
@@ -389,10 +469,15 @@ h1, h2, h3, h4, h5, h6 {
     margin: var(--spacing-md) auto;
     box-shadow: var(--shadow-sm);
     transition: all var(--transition-base);
+    color: var(--text-primary);
 }
 
 .stExpander:hover {
     box-shadow: var(--shadow-md);
+}
+
+[data-testid="stExpander"] summary {
+    color: var(--error);
 }
 
 /* ================================================
@@ -405,7 +490,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .stChatInput {
-    max-width: 100%;
+    max-width: 70%;
 }
 
 /* ================================================
@@ -439,6 +524,8 @@ h1, h2, h3, h4, h5, h6 {
 
 .element-container {
     margin-bottom: var(--spacing-md);
+    margin-left: center;
+    color: var(--text-primary);
 }
 
 /* Column layout improvements */
