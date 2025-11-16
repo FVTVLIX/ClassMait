@@ -360,7 +360,7 @@ def page_home():
     st.markdown(
         """
         <div class="home-container">
-            <h1 class="title">Classmait</h1>
+            <h1 class="title">CLASSM<span class="italic">ai</span>T</h1>
             <p class="subtitle">Your Personal AI Learning Assistant</p>
             <p class="home-description">
                 Transform any textbook into an interactive learning experience
@@ -461,7 +461,14 @@ def page_api_key():
 def page_upload():
     nav_bar()
 
-    st.markdown("## 📚 Upload Your Textbook (PDF)")
+    st.markdown(
+        """
+        <div class="upload-container">
+            <h2 class="upload-title">Upload Your Textbook (PDF)</h2>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     uploaded = st.file_uploader(
         "Drag‑and‑drop a PDF file here", type="pdf", label_visibility="collapsed"
@@ -500,17 +507,27 @@ def page_level():
     if st.session_state.rag is None:
         st.warning(
             """
-            ⚠️ **Notice:** Your textbook needs to be re-processed after refreshing the page.
+            ⚠️ **Notice:** Your textbook will need to be re-processed if you refresh this page.
 
-            Please upload your PDF again to continue chatting. Your chat history has been preserved!
+            Please upload your PDF again to continue chatting if page has been refreshed. Your chat history has been preserved!
             """
         )
-        if st.button("📚 Upload Textbook", type="primary"):
-            st.session_state.step = 2
-            st.rerun()
-        st.markdown("---")
+        col_left, col_center, col_right = st.columns([1, 2, 1])
+        with col_center:
+            if st.button("Upload New Textbook →", use_container_width=True, type="primary"):
+                st.session_state.step = 2
+                st.rerun()
+            st.markdown("---")
 
-    st.markdown("## 🎯 Choose Your Learning Level")
+    st.markdown(""" 
+    <div class="level-container">
+        <h2 class="level-title">Choose Your Learning Level</h2>
+        <p class="level-description">Select your learning level to help the assistant tailor their responses to your knowledge level. This will help the assistant provide more accurate and helpful responses. You can change your level at any time.</p> 
+    </div>
+    """,
+    unsafe_allow_html=True,
+    )
+
 
     level = st.radio(
         "Select level:",

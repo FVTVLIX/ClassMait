@@ -7,6 +7,7 @@
    ================================================ */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700;800&family=Roboto:wght@300;400;500;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Stack+Sans+Headline:wght@200..700&display=swap" rel="stylesheet');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
 /* ================================================
    CSS VARIABLES
    ================================================ */
@@ -56,6 +57,7 @@
     --font-primary: 'Stack Sans Headline', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     --font-headings: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     --font-mono: 'Roboto Mono', 'Courier New', monospace;
+    --font-italic: 'Playfair Display', serif;
 }
 
 /* ================================================
@@ -153,12 +155,17 @@ body {
     color: var(--text-primary);
     font-family: var(--font-primary);
     font-size: 8rem;
-    text-transform: uppercase;
+    /* text-transform: uppercase; */
 }
 
 .home-container .subtitle {
     color: var(--text-secondary);
     font-size: 2rem;
+}
+
+.home-container .italic {
+    font-family: var(--font-italic);
+    font-style: italic;
 }
 
 /* ================================================
@@ -200,6 +207,46 @@ body {
     text-align: center;
     margin-top: var(--spacing-md);
 }
+
+/* ================================================
+   UPLOAD PAGE
+   ================================================ */
+.upload-container {
+    text-align: center;
+    font-family: var(--font-primary);
+}
+
+.upload-container .upload-title {
+    color: var(--text-primary);
+    font-size: 6rem;
+    font-family: var(--font-primary);
+}
+
+/* ================================================
+   LEVEL PAGE
+   ================================================ */
+.level-container {
+    text-align: center;
+    font-family: var(--font-primary);
+}
+
+.level-container .level-title {
+    color: var(--text-primary);
+    font-size: 6rem;
+    font-family: var(--font-primary);
+}
+
+[data-testid="stAlertContentWarning"] {
+    /* background-color: var(--dark-border); */
+    color: var(--text-primary);
+    font-family: var(--font-primary);
+}
+
+/* [data-testid="stRadio"] {
+    align-items: center;
+    justify-content: center;
+} */
+
 
 /* ================================================
    MAIN CONTAINER
@@ -387,10 +434,11 @@ h1, h2, h3, h4, h5, h6 {
     max-width: 600px;
     margin: 0 auto;
     animation: scaleIn var(--transition-base);
+    color: var(--border-gray);
 }
 
 [data-testid="stFileUploader"] {
-    background-color: var(--white);
+    background-color: #bebbbb;
     border-radius: var(--radius-lg);
     padding: var(--spacing-xl);
     border: 2px dashed #cbd5e0;
@@ -399,7 +447,7 @@ h1, h2, h3, h4, h5, h6 {
 
 [data-testid="stFileUploader"]:hover {
     border-color: var(--primary-color);
-    background-color: #f8f9ff;
+    background-color: var(--dark-border);
 }
 
 /* Radio Buttons */
@@ -414,6 +462,10 @@ h1, h2, h3, h4, h5, h6 {
     padding: var(--spacing-md);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-md);
+}
+
+.stRadio p {
+    color: var(--text-primary);
 }
 
 /* ================================================
