@@ -272,10 +272,40 @@ def page_level():
 #  PAGE 4 – PROCESSING (the step that used to error)
 # -------------------------------------------------
 def page_processing():
-    nav_bar()
-    
+    # Initialize cancel flag if it doesn't exist
+    if "cancel_processing" not in st.session_state:
+        st.session_state.cancel_processing = False
+
+    # Custom navigation bar for processing page (no back button, only stop button)
+    col_center, col_right = st.columns([6, 1])
+
+    with col_center:
+        st.markdown(
+            f"<h4 style='text-align:center; margin:0;'>Step {st.session_state.step + 1} of 6</h4>",
+            unsafe_allow_html=True,
+        )
+
+    with col_right:
+        if st.button("⏹ Stop", key="stop_processing", type="secondary"):
+            st.session_state.cancel_processing = True
+            # Clean up and go back to upload step
+            if st.session_state.uploaded_path and Path(st.session_state.uploaded_path).is_file():
+                try:
+                    os.unlink(st.session_state.uploaded_path)
+                except:
+                    pass
+            st.session_state.step = 2
+            st.rerun()
+
+    st.markdown("---")
+
+    # Check if user cancelled
+    if st.session_state.cancel_processing:
+        st.session_state.cancel_processing = False
+        return
+
     # NEW: Re-create PDF file if it was deleted
-    if (st.session_state.uploaded_path and 
+    if (st.session_state.uploaded_path and
         not Path(st.session_state.uploaded_path).is_file()):
         # File was deleted, re-create it from stored bytes
         with open(st.session_state.uploaded_path, "wb") as f:
@@ -285,7 +315,7 @@ def page_processing():
     # Continue with normal processing...
     st.markdown("## ⏳ Processing Your Textbook")
     st.markdown("Extracting, embedding and indexing your content.")
-    
+
     progress = st.progress(0)
     status = st.empty()
 
@@ -303,7 +333,7 @@ def page_processing():
     # 3️⃣ Ingest PDF
     status.markdown("📄 Reading and chunking PDF…")
     progress.progress(35)
-    
+
     pdf_path = st.session_state.uploaded_path
     rag.ingest_pdf(pdf_path)
     time.sleep(0.5)
