@@ -583,11 +583,18 @@ def page_processing():
         # File was deleted, re-create it from stored bytes
         with open(st.session_state.uploaded_path, "wb") as f:
             f.write(st.session_state.pdf_bytes)
-        st.info("🔄 PDF file re-created for processing.")
+        st.info("PDF file re-created for processing.")
 
     # Continue with normal processing...
-    st.markdown("## ⏳ Processing Your Textbook")
-    st.markdown("Extracting, embedding and indexing your content.")
+    st.markdown(
+        """
+        <div class="processing-container">
+            <h2 class="processing-title">Processing Your Textbook</h2>
+            <p class="processing-description">Extracting, embedding and indexing your content.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     progress = st.progress(0)
     status = st.empty()
