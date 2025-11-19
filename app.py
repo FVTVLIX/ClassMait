@@ -556,88 +556,202 @@ def page_level():
         # Otherwise, need to process textbook
         elif st.session_state.uploaded_path or st.session_state.pdf_bytes:
             if st.button(
-                "Process Textbook →", key="process_start", use_container_width=True
+                "Process Textbook", key="process_start", use_container_width=True
             ):
                 save_session_state()  # Save before processing
                 st.session_state.step = 4  # go to processing page
                 st.rerun()
         else:
             if st.button(
-                "Upload Textbook →", key="goto_upload", use_container_width=True
+                "Upload Textbook", key="goto_upload", use_container_width=True
             ):
                 st.session_state.step = 2
                 st.rerun()
 
 
 # -------------------------------------------------
-#  PAGE 4 – PROCESSING (the step that used to error)
+#  PAGE 4 – PROCESSING 
 # -------------------------------------------------
 def page_processing():
     nav_bar()
 
-    # NEW: Re-create PDF file if it was deleted
-    if (
-        st.session_state.uploaded_path
-        and not Path(st.session_state.uploaded_path).is_file()
-    ):
-        # File was deleted, re-create it from stored bytes
-        with open(st.session_state.uploaded_path, "wb") as f:
-            f.write(st.session_state.pdf_bytes)
-        st.info("PDF file re-created for processing.")
+    # # Re-create PDF file if it was deleted
+    # if (
+    #     st.session_state.uploaded_path
+    #     and not Path(st.session_state.uploaded_path).is_file()
+    # ):
+    #     # File was deleted, re-create it from stored bytes
+    #     with open(st.session_state.uploaded_path, "wb") as f:
+    #         f.write(st.session_state.pdf_bytes)
+    #     st.info("PDF file re-created for processing.")
 
-    # Continue with normal processing...
-    st.markdown(
-        """
-        <div class="processing-container">
-            <h2 class="processing-title">Processing Your Textbook</h2>
-            <p class="processing-description">Extracting, embedding and indexing your content.</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    # # Continue with normal processing...
+    # st.markdown(
+    #     """
+    #     <div class="processing-container">
+    #         <h2 class="processing-title">Processing Your Textbook</h2>
+    #         <p class="processing-description">Extracting, embedding and indexing your content.</p>
+    #     </div>
+    #     """,
+    #     unsafe_allow_html=True,
+    # )
 
-    progress = st.progress(0)
-    status = st.empty()
+    # progress = st.progress(0)
+    # status = st.empty()
 
-    # 1️⃣ Set API key
-    status.markdown("🔧 Setting OpenAI API key…")
-    progress.progress(10)
-    os.environ["OPENAI_API_KEY"] = st.session_state.api_key
+    # # 1️⃣ Set API key
+    # status.markdown("Setting OpenAI API key…")
+    # progress.progress(10)
+    # os.environ["OPENAI_API_KEY"] = st.session_state.api_key
 
-    # 2️⃣ Init RAG system
-    status.markdown("🔧 Initialising RAG system…")
-    progress.progress(20)
-    rag = RAGSystem()
-    time.sleep(0.5)
+    # # 2️⃣ Init RAG system
+    # status.markdown("Initialising RAG system…")
+    # progress.progress(20)
+    # rag = RAGSystem()
+    # time.sleep(0.5)
 
-    # 3️⃣ Ingest PDF
-    status.markdown("📄 Reading and chunking PDF…")
-    progress.progress(35)
+    # # 3️⃣ Ingest PDF
+    # status.markdown("Reading and chunking PDF…")
+    # progress.progress(35)
 
-    pdf_path = st.session_state.uploaded_path
-    rag.ingest_pdf(pdf_path)
-    time.sleep(0.5)
+    # pdf_path = st.session_state.uploaded_path
+    # rag.ingest_pdf(pdf_path)
+    # time.sleep(0.5)
 
-    # 4️⃣ Build embeddings
-    status.markdown("🧠 Building embeddings…")
-    progress.progress(70)
-    time.sleep(0.5)
+    # # 4️⃣ Build embeddings
+    # status.markdown("Building embeddings…")
+    # progress.progress(70)
+    # time.sleep(0.5)
 
-    # 5️⃣ Done!
-    status.markdown("✅ Done! You can start chatting.")
-    progress.progress(100)
+    # # 5️⃣ Done!
+    # status.markdown("Done! You can start chatting.")
+    # progress.progress(100)
 
-    st.session_state.rag = rag
+    # st.session_state.rag = rag
 
-    # Clean up temporary file
-    try:
-        os.unlink(pdf_path)
-    except Exception as e:
-        st.warning(f"Could not delete temp file: {e}")
+    # # Clean up temporary file
+    # try:
+    #     os.unlink(pdf_path)
+    # except Exception as e:
+    #     st.warning(f"Could not delete temp file: {e}")
 
-    time.sleep(1)
-    st.session_state.step = 5
-    st.rerun()
+    # time.sleep(1)
+    # st.session_state.step = 5
+    # st.rerun()
+
+    # Initialize processing state
+    if "processing_stage" not in st.session_state:
+        st.session_state.processing_stage = 0  # 0=initialized, 1=processing, 2=done, 3=stopped
+    
+    # Main container to isolate the page
+    with st.container():
+        # Navigation bar at top
+        col_left, col_center, col_right = st.columns([1, 6, 1])
+        with col_left:
+            st.button("← Back", key="processing_back", 
+                      on_click=lambda: st.session_state.update({"step": 3}))
+        
+        # Title
+        st.markdown("## ⏳ Processing Your Textbook")
+        st.markdown("Please wait while we analyze your textbook. This may take several minutes.")
+        
+        # Progress section
+        with st.container():
+            if st.session_state.processing_stage == 0:  # Initial state
+                st.session_state.processing_stage = 1  # Start processing
+                st.rerun()
+            
+            # Progress bar
+            progress_bar = st.progress(0)
+            
+            # Status display
+            status_text = st.empty()
+            
+            # Stop button container
+            stop_container = st.empty()
+            
+            # Initialize progress value
+            if "processing_progress" not in st.session_state:
+                st.session_state.processing_progress = 0
+            
+            # Simulation steps (replace with actual steps in your implementation)
+            processing_steps = [
+                ("Initializing learning system...", 10),
+                ("Analyzing textbook content...", 30),
+                ("Extracting key concepts...", 50),
+                ("Building knowledge structure...", 70),
+                ("Finalizing content indexing...", 90),
+                ("Processing completed successfully!", 100)
+            ]
+            
+            # If we're processing (stage 1) and not finished
+            if st.session_state.processing_stage == 1:
+                # Get current step based on progress
+                current_step = None
+                for step in processing_steps:
+                    if st.session_state.processing_progress <= step[1]:
+                        current_step = step
+                        break
+                
+                if current_step:
+                    # Update status and progress
+                    status_text.markdown(f"**{current_step[0]}**")
+                    progress_bar.progress(st.session_state.processing_progress)
+                    
+                    # Update progress
+                    st.session_state.processing_progress += 1
+                    
+                    # Add Stop button
+                    if stop_container.button("Stop Processing", key="stop_button"):
+                        st.session_state.processing_stage = 3  # Stopped
+                        st.rerun()
+                    
+                    # Rerun every 0.1 seconds to simulate progress
+                    time.sleep(0.05)
+                    st.rerun()
+                else:
+                    st.session_state.processing_stage = 2
+                    st.rerun()
+            
+            # When processing completes
+            elif st.session_state.processing_stage == 2:
+                progress_bar.progress(100)
+                status_text.markdown("Processing completed successfully!")
+                time.sleep(1)  # Show completion briefly
+                
+                # Actual RAG processing
+                try:
+                    st.session_state.rag = RAGSystem()
+                    st.session_state.rag.ingest_pdf(st.session_state.uploaded_path)
+                    
+                    # Clean up temporary file
+                    try:
+                        os.unlink(st.session_state.uploaded_path)
+                    except Exception as e:
+                        st.warning(f"Could not delete temporary file: {e}")
+                except Exception as e:
+                    status_text.error(f"Error during processing: {e}")
+                    time.sleep(1)
+                    st.session_state.step = 3
+                    st.rerun()
+                
+                # Move to chat page
+                st.session_state.step = 5
+                st.rerun()
+            
+            # When processing is stopped
+            elif st.session_state.processing_stage == 3:
+                progress_bar.progress(st.session_state.processing_progress)
+                status_text.error("Processing stopped")
+                
+                # Option to resume or go back
+                if st.button("↩ Continue Processing", key="resume_processing"):
+                    st.session_state.processing_stage = 1
+                    st.rerun()
+                
+                if st.button("← Back to Settings", key="processing_stop_back"):
+                    st.session_state.step = 3
+                    st.rerun()
 
 
 # -------------------------------------------------
@@ -647,6 +761,24 @@ def page_chat():
     # Initialize processing flag if it doesn't exist
     if "processing_response" not in st.session_state:
         st.session_state.processing_response = False
+
+    # Add mobile menu toggle button and JavaScript
+    st.markdown("""
+        <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
+            ☰ Menu
+        </button>
+        <div class="mobile-menu-overlay" onclick="toggleMobileMenu()"></div>
+        <script>
+        function toggleMobileMenu() {
+            const sidebar = window.parent.document.querySelector('[data-testid="stSidebar"]');
+            const overlay = window.parent.document.querySelector('.mobile-menu-overlay');
+            if (sidebar && overlay) {
+                sidebar.classList.toggle('mobile-menu-open');
+                overlay.classList.toggle('active');
+            }
+        }
+        </script>
+    """, unsafe_allow_html=True)
 
     # CHECK: Ensure RAG system is initialized before allowing chat
     if st.session_state.rag is None:
