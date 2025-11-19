@@ -277,9 +277,9 @@ def nav_bar():
         )
 
     # Right side empty (keeps layout balanced)
-    # with col_right:
-    #     st.write("")
-    # st.markdown("---")
+    with col_right:
+        st.write("")
+    st.markdown("---")
 
 
 # -------------------------------------------------
@@ -516,122 +516,243 @@ def page_level():
 #  PAGE 4 – PROCESSING 
 # -------------------------------------------------
 def page_processing():
-    nav_bar()
+    # nav_bar()
 
-    # Initialize processing state
-    if "processing_stage" not in st.session_state:
-        st.session_state.processing_stage = 0  # 0=initialized, 1=processing, 2=done, 3=stopped
+    # # Initialize processing state
+    # if "processing_stage" not in st.session_state:
+    #     st.session_state.processing_stage = 0  # 0=initialized, 1=processing, 2=done, 3=stopped
     
-    # Main container to isolate the page
-    with st.container():
-        # Navigation bar at top
-        col_left, col_center, col_right = st.columns([1, 6, 1])
-        with col_left:
-            st.button("← Back", key="processing_back", 
-                      on_click=lambda: st.session_state.update({"step": 3}))
+    # # Main container to isolate the page
+    # with st.container():
+    #     # Navigation bar at top
+    #     col_left, col_center, col_right = st.columns([1, 6, 1])
+    #     with col_left:
+    #         st.button("← Back", key="processing_back", 
+    #                   on_click=lambda: st.session_state.update({"step": 3}))
         
-        # Title
-        st.markdown("## ⏳ Processing Your Textbook")
-        st.markdown("Please wait while we analyze your textbook. This may take several minutes.")
+    #     # Title
+    #     st.markdown("## ⏳ Processing Your Textbook")
+    #     st.markdown("Please wait while we analyze your textbook. This may take several minutes.")
         
-        # Progress section
-        with st.container():
-            if st.session_state.processing_stage == 0:  # Initial state
-                st.session_state.processing_stage = 1  # Start processing
-                st.rerun()
+    #     # Progress section
+    #     with st.container():
+    #         if st.session_state.processing_stage == 0:  # Initial state
+    #             st.session_state.processing_stage = 1  # Start processing
+    #             st.rerun()
             
-            # Progress bar
-            progress_bar = st.progress(0)
+    #         # Progress bar
+    #         progress_bar = st.progress(0)
             
-            # Status display
-            status_text = st.empty()
+    #         # Status display
+    #         status_text = st.empty()
             
-            # Stop button container
-            stop_container = st.empty()
+    #         # Stop button container
+    #         stop_container = st.empty()
             
-            # Initialize progress value
-            if "processing_progress" not in st.session_state:
-                st.session_state.processing_progress = 0
+    #         # Initialize progress value
+    #         if "processing_progress" not in st.session_state:
+    #             st.session_state.processing_progress = 0
             
-            # Simulation steps (replace with actual steps in your implementation)
-            processing_steps = [
-                ("Initializing learning system...", 10),
-                ("Analyzing textbook content...", 30),
-                ("Extracting key concepts...", 50),
-                ("Building knowledge structure...", 70),
-                ("Finalizing content indexing...", 90),
-                ("Processing completed successfully!", 100)
-            ]
+    #         # Simulation steps (replace with actual steps in your implementation)
+    #         processing_steps = [
+    #             ("Initializing learning system...", 10),
+    #             ("Analyzing textbook content...", 30),
+    #             ("Extracting key concepts...", 50),
+    #             ("Building knowledge structure...", 70),
+    #             ("Finalizing content indexing...", 90),
+    #             ("Processing completed successfully!", 100)
+    #         ]
             
-            # If we're processing (stage 1) and not finished
-            if st.session_state.processing_stage == 1:
-                # Get current step based on progress
-                current_step = None
-                for step in processing_steps:
-                    if st.session_state.processing_progress <= step[1]:
-                        current_step = step
-                        break
+    #         # If we're processing (stage 1) and not finished
+    #         if st.session_state.processing_stage == 1:
+    #             # Get current step based on progress
+    #             current_step = None
+    #             for step in processing_steps:
+    #                 if st.session_state.processing_progress <= step[1]:
+    #                     current_step = step
+    #                     break
                 
-                if current_step:
-                    # Update status and progress
-                    status_text.markdown(f"**{current_step[0]}**")
-                    progress_bar.progress(st.session_state.processing_progress)
+    #             if current_step:
+    #                 # Update status and progress
+    #                 status_text.markdown(f"**{current_step[0]}**")
+    #                 progress_bar.progress(st.session_state.processing_progress)
                     
-                    # Update progress
-                    st.session_state.processing_progress += 1
+    #                 # Update progress
+    #                 st.session_state.processing_progress += 1
                     
-                    # Add Stop button
-                    if stop_container.button("Stop Processing", key="stop_button"):
-                        st.session_state.processing_stage = 3  # Stopped
-                        st.rerun()
+    #                 # Add Stop button
+    #                 if stop_container.button("Stop Processing", key="stop_button"):
+    #                     st.session_state.processing_stage = 3  # Stopped
+    #                     st.rerun()
                     
-                    # Rerun every 0.1 seconds to simulate progress
-                    time.sleep(0.05)
-                    st.rerun()
-                else:
-                    st.session_state.processing_stage = 2
-                    st.rerun()
+    #                 # Rerun every 0.1 seconds to simulate progress
+    #                 time.sleep(0.05)
+    #                 st.rerun()
+    #             else:
+    #                 st.session_state.processing_stage = 2
+    #                 st.rerun()
             
-            # When processing completes
-            elif st.session_state.processing_stage == 2:
-                progress_bar.progress(100)
-                status_text.markdown("Processing completed successfully!")
-                time.sleep(1)  # Show completion briefly
+    #         # When processing completes
+    #         elif st.session_state.processing_stage == 2:
+    #             progress_bar.progress(100)
+    #             status_text.markdown("Processing completed successfully!")
+    #             time.sleep(1)  # Show completion briefly
                 
-                # Actual RAG processing
-                try:
-                    st.session_state.rag = RAGSystem()
-                    st.session_state.rag.ingest_pdf(st.session_state.uploaded_path)
+    #             # Actual RAG processing
+    #             try:
+    #                 st.session_state.rag = RAGSystem()
+    #                 st.session_state.rag.ingest_pdf(st.session_state.uploaded_path)
                     
-                    # Clean up temporary file
-                    try:
-                        os.unlink(st.session_state.uploaded_path)
-                    except Exception as e:
-                        st.warning(f"Could not delete temporary file: {e}")
-                except Exception as e:
-                    status_text.error(f"Error during processing: {e}")
-                    time.sleep(1)
-                    st.session_state.step = 3
-                    st.rerun()
+    #                 # Clean up temporary file
+    #                 try:
+    #                     os.unlink(st.session_state.uploaded_path)
+    #                 except Exception as e:
+    #                     st.warning(f"Could not delete temporary file: {e}")
+    #             except Exception as e:
+    #                 status_text.error(f"Error during processing: {e}")
+    #                 time.sleep(1)
+    #                 st.session_state.step = 3
+    #                 st.rerun()
                 
-                # Move to chat page
-                st.session_state.step = 5
-                st.rerun()
+    #             # Move to chat page
+    #             st.session_state.step = 5
+    #             st.rerun()
             
-            # When processing is stopped
-            elif st.session_state.processing_stage == 3:
-                progress_bar.progress(st.session_state.processing_progress)
-                status_text.error("Processing stopped")
+    #         # When processing is stopped
+    #         elif st.session_state.processing_stage == 3:
+    #             progress_bar.progress(st.session_state.processing_progress)
+    #             status_text.error("Processing stopped")
                 
-                # Option to resume or go back
-                if st.button("↩ Continue Processing", key="resume_processing"):
-                    st.session_state.processing_stage = 1
-                    st.rerun()
+    #             # Option to resume or go back
+    #             if st.button("↩ Continue Processing", key="resume_processing"):
+    #                 st.session_state.processing_stage = 1
+    #                 st.rerun()
                 
-                if st.button("← Back to Settings", key="processing_stop_back"):
-                    st.session_state.step = 3
-                    st.rerun()
+    #             if st.button("← Back to Settings", key="processing_stop_back"):
+    #                 st.session_state.step = 3
+    #                 st.rerun()
 
+
+    # Initialize cancel flag if it doesn't exist
+    if "cancel_processing" not in st.session_state:
+        st.session_state.cancel_processing = False
+
+    # Wrap entire processing page in a container div for isolation
+    # st.markdown(
+    #     """
+    #     <div id="processing-page-container" style="width:100%; min-height:100vh; background:#fff; position:relative; z-index:1000;">
+    #     </div>
+    #     """,
+    #     unsafe_allow_html=True,
+    # )
+
+    # Custom navigation bar for processing page (no back button, only stop button)
+    # st.markdown('<div id="processing-nav-bar" class="processing-navigation">', unsafe_allow_html=True)
+
+    col_left, col_center, col_right = st.columns([1, 6, 1])
+
+    with col_left:
+        st.button("← Back", key="processing_back", 
+        on_click=lambda: st.session_state.update({"step": 3}))
+
+    with col_center:
+        st.markdown(
+            f'<div id="processing-step-indicator"><h4 style="text-align:center; margin:0;">Step {st.session_state.step + 1} of 6</h4></div>',
+            unsafe_allow_html=True,
+        )
+
+    with col_right:
+        st.markdown('<div id="processing-stop-button-container">', unsafe_allow_html=True)
+        if st.button("⏹ Stop", key="stop_processing", type="secondary"):
+            st.session_state.cancel_processing = True
+            # Clean up and go back to upload step
+            if st.session_state.uploaded_path and Path(st.session_state.uploaded_path).is_file():
+                try:
+                    os.unlink(st.session_state.uploaded_path)
+                except:
+                    pass
+            st.session_state.step = 2
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # st.markdown('</div>', unsafe_allow_html=True)  # Close processing-nav-bar
+    # st.markdown("---")
+
+    # Check if user cancelled
+    if st.session_state.cancel_processing:
+        st.session_state.cancel_processing = False
+        return
+
+    # NEW: Re-create PDF file if it was deleted
+    if (st.session_state.uploaded_path and
+        not Path(st.session_state.uploaded_path).is_file()):
+        # File was deleted, re-create it from stored bytes
+        with open(st.session_state.uploaded_path, "wb") as f:
+            f.write(st.session_state.pdf_bytes)
+        st.info("🔄 PDF file re-created for processing.")
+
+        # Title section
+    st.markdown(
+        '<div id="processing-title-section">'
+        '<h2>Processing Your Textbook</h2>'
+        '<p>Extracting, embedding and indexing your content.</p>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    # Processing content wrapper
+    st.markdown('<div id="processing-content-container" class="processing-content">', unsafe_allow_html=True)
+
+    # Progress section wrapper
+    st.markdown('<div id="processing-progress-section" class="progress-section">', unsafe_allow_html=True)
+
+    progress = st.progress(0)
+    st.markdown('<div id="processing-status-container" class="status-container">', unsafe_allow_html=True)
+    status = st.empty()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # 1️⃣ Set API key
+    status.markdown('<div class="status-message">Setting OpenAI API key…</div>', unsafe_allow_html=True)
+    progress.progress(10)
+    os.environ["OPENAI_API_KEY"] = st.session_state.api_key
+
+    # 2️⃣ Init RAG system
+    status.markdown('<div class="status-message">Initialising RAG system…</div>', unsafe_allow_html=True)
+    progress.progress(20)
+    rag = RAGSystem()
+    time.sleep(0.5)
+
+    # 3️⃣ Ingest PDF
+    status.markdown('<div class="status-message">Reading and chunking PDF…</div>', unsafe_allow_html=True)
+    progress.progress(35)
+
+    pdf_path = st.session_state.uploaded_path
+    rag.ingest_pdf(pdf_path)
+    time.sleep(0.5)
+
+    # 4️⃣ Build embeddings
+    status.markdown('<div class="status-message">Building embeddings…</div>', unsafe_allow_html=True)
+    progress.progress(70)
+    time.sleep(0.5)
+
+    # 5️⃣ Done!
+    status.markdown('<div class="status-message">Done! You can start chatting.</div>', unsafe_allow_html=True)
+    progress.progress(100)
+
+    st.markdown('</div>', unsafe_allow_html=True)  # Close processing-progress-section
+    st.markdown('</div>', unsafe_allow_html=True)  # Close processing-content-container
+
+    st.session_state.rag = rag
+
+    # Clean up temporary file
+    try:
+        os.unlink(pdf_path)
+    except Exception as e:
+        st.warning(f"Could not delete temp file: {e}")
+
+    time.sleep(1)
+    st.session_state.step = 5
+    st.rerun()
 
 # -------------------------------------------------
 #  PAGE 5 – CHAT INTERFACE WITH HISTORY SIDEBAR
@@ -661,7 +782,7 @@ def page_chat():
 
     # CHECK: Ensure RAG system is initialized before allowing chat
     if st.session_state.rag is None:
-        st.error("⚠️ **PDF Processing Required**")
+        st.error("**PDF Processing Required**")
         st.warning(
             """
             Your textbook needs to be processed before you can chat.
