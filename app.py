@@ -276,16 +276,28 @@ def page_processing():
     if "cancel_processing" not in st.session_state:
         st.session_state.cancel_processing = False
 
+    # Wrap entire processing page in a container div for isolation
+    st.markdown(
+        """
+        <div id="processing-page-container" style="width:100%; min-height:100vh; background:#fff; position:relative; z-index:1000;">
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     # Custom navigation bar for processing page (no back button, only stop button)
+    st.markdown('<div id="processing-nav-bar" class="processing-navigation">', unsafe_allow_html=True)
+
     col_center, col_right = st.columns([6, 1])
 
     with col_center:
         st.markdown(
-            f"<h4 style='text-align:center; margin:0;'>Step {st.session_state.step + 1} of 6</h4>",
+            f'<div id="processing-step-indicator"><h4 style="text-align:center; margin:0;">Step {st.session_state.step + 1} of 6</h4></div>',
             unsafe_allow_html=True,
         )
 
     with col_right:
+        st.markdown('<div id="processing-stop-button-container">', unsafe_allow_html=True)
         if st.button("⏹ Stop", key="stop_processing", type="secondary"):
             st.session_state.cancel_processing = True
             # Clean up and go back to upload step
@@ -296,7 +308,9 @@ def page_processing():
                     pass
             st.session_state.step = 2
             st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
+    st.markdown('</div>', unsafe_allow_html=True)  # Close processing-nav-bar
     st.markdown("---")
 
     # Check if user cancelled
@@ -312,26 +326,39 @@ def page_processing():
             f.write(st.session_state.pdf_bytes)
         st.info("🔄 PDF file re-created for processing.")
 
-    # Continue with normal processing...
-    st.markdown("## ⏳ Processing Your Textbook")
-    st.markdown("Extracting, embedding and indexing your content.")
+    # Processing content wrapper
+    st.markdown('<div id="processing-content-container" class="processing-content">', unsafe_allow_html=True)
+
+    # Title section
+    st.markdown(
+        '<div id="processing-title-section">'
+        '<h2>⏳ Processing Your Textbook</h2>'
+        '<p>Extracting, embedding and indexing your content.</p>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    # Progress section wrapper
+    st.markdown('<div id="processing-progress-section" class="progress-section">', unsafe_allow_html=True)
 
     progress = st.progress(0)
+    st.markdown('<div id="processing-status-container" class="status-container">', unsafe_allow_html=True)
     status = st.empty()
+    st.markdown('</div>', unsafe_allow_html=True)
 
     # 1️⃣ Set API key
-    status.markdown("🔧 Setting OpenAI API key…")
+    status.markdown('<div class="status-message">🔧 Setting OpenAI API key…</div>', unsafe_allow_html=True)
     progress.progress(10)
     os.environ["OPENAI_API_KEY"] = st.session_state.api_key
 
     # 2️⃣ Init RAG system
-    status.markdown("🔧 Initialising RAG system…")
+    status.markdown('<div class="status-message">🔧 Initialising RAG system…</div>', unsafe_allow_html=True)
     progress.progress(20)
     rag = RAGSystem()
     time.sleep(0.5)
 
     # 3️⃣ Ingest PDF
-    status.markdown("📄 Reading and chunking PDF…")
+    status.markdown('<div class="status-message">📄 Reading and chunking PDF…</div>', unsafe_allow_html=True)
     progress.progress(35)
 
     pdf_path = st.session_state.uploaded_path
@@ -339,13 +366,16 @@ def page_processing():
     time.sleep(0.5)
 
     # 4️⃣ Build embeddings
-    status.markdown("🧠 Building embeddings…")
+    status.markdown('<div class="status-message">🧠 Building embeddings…</div>', unsafe_allow_html=True)
     progress.progress(70)
     time.sleep(0.5)
 
     # 5️⃣ Done!
-    status.markdown("✅ Done! You can start chatting.")
+    status.markdown('<div class="status-message">✅ Done! You can start chatting.</div>', unsafe_allow_html=True)
     progress.progress(100)
+
+    st.markdown('</div>', unsafe_allow_html=True)  # Close processing-progress-section
+    st.markdown('</div>', unsafe_allow_html=True)  # Close processing-content-container
 
     st.session_state.rag = rag
 
@@ -420,10 +450,87 @@ def page_chat():
 #  MAIN ROUTER
 # -------------------------------------------------
 def main():
-    # Optional: load a CSS file for extra polish (you can skip this)
-    # if Path("style.css").exists():
-    #     with open("style.css") as f:
-    #         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    # Add CSS for page isolation and styling
+    st.markdown(
+        """
+        <style>
+        /* Processing page isolation styles */
+        #processing-page-container {
+            width: 100%;
+            min-height: 100vh;
+            background: #ffffff;
+            position: relative;
+            z-index: 1000;
+            padding: 1rem;
+        }
+
+        .processing-navigation {
+            margin-bottom: 1rem;
+            padding: 0.5rem 0;
+        }
+
+        #processing-step-indicator h4 {
+            font-size: 1.2rem;
+            color: #333;
+        }
+
+        #processing-stop-button-container {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+        }
+
+        .processing-content {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: #f9fafb;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        #processing-title-section h2 {
+            color: #1f2937;
+            margin-bottom: 0.5rem;
+        }
+
+        #processing-title-section p {
+            color: #6b7280;
+            font-size: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .progress-section {
+            margin-top: 2rem;
+        }
+
+        .status-container {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #ffffff;
+            border-radius: 8px;
+            min-height: 60px;
+        }
+
+        .status-message {
+            font-size: 1.1rem;
+            color: #374151;
+            padding: 0.5rem 0;
+        }
+
+        /* Hide elements from previous steps when on processing page */
+        [data-testid="stApp"] > div:not(:last-child) {
+            display: none !important;
+        }
+
+        /* Ensure clean render */
+        .stApp {
+            background: #ffffff;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
     step = st.session_state.step
 
