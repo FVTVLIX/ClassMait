@@ -447,20 +447,20 @@ def page_level():
     nav_bar()
 
     # Show warning if RAG is not initialized (e.g., after page refresh)
-    if st.session_state.rag is None:
-        st.warning(
-            """
-            ⚠️ **Notice:** Your textbook will need to be re-processed if you refresh this page.
+    # if st.session_state.rag is None:
+    #     st.warning(
+    #         """
+    #         ⚠️ **Notice:** Your textbook will need to be re-processed if you refresh this page.
 
-            Please upload your PDF again to continue chatting if page has been refreshed. Your chat history has been preserved!
-            """
-        )
-        col_left, col_center, col_right = st.columns([1, 2, 1])
-        with col_center:
-            if st.button("Upload New Textbook →", use_container_width=True, type="primary"):
-                st.session_state.step = 2
-                st.rerun()
-            st.markdown("---")
+    #         Please upload your PDF again to continue chatting if page has been refreshed. Your chat history has been preserved!
+    #         """
+    #     )
+    #     col_left, col_center, col_right = st.columns([1, 2, 1])
+    #     with col_center:
+    #         if st.button("Upload New Textbook →", use_container_width=True, type="primary"):
+    #             st.session_state.step = 2
+    #             st.rerun()
+    #         st.markdown("---")
 
     st.markdown(""" 
     <div class="level-container">
@@ -799,13 +799,13 @@ def page_chat():
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             if st.button(
-                "📚 Go to Upload & Process", use_container_width=True, type="primary"
+                "Go to Upload & Process", use_container_width=True, type="primary"
             ):
                 st.session_state.step = 2
                 st.rerun()
 
         st.info(
-            "💡 **Tip:** Your chat history has been preserved and will be available after processing."
+            "**Tip:** Your chat history has been preserved and will be available after processing."
         )
         st.stop()  # Stop execution here to prevent the error
 
@@ -814,10 +814,10 @@ def page_chat():
 
     # Create sidebar for chat history
     with st.sidebar:
-        st.markdown("### 💬 Chat History")
+        st.markdown("### Chat History")
 
         # New chat button
-        if st.button("➕ New Chat", key="new_chat_btn", use_container_width=True):
+        if st.button("➕  New Chat", key="new_chat_btn", use_container_width=True):
             create_new_thread()
             save_session_state()  # Save after creating new thread
             st.rerun()
@@ -836,7 +836,7 @@ def page_chat():
 
                     with col1:
                         # Thread button with highlighting for current thread
-                        button_label = f"{'🟢 ' if is_current else ''}{thread['title']}"
+                        button_label = f"{'🟢  ' if is_current else ''}{thread['title']}"
                         if st.button(
                             button_label,
                             key=f"thread_{thread['id']}",
@@ -850,7 +850,7 @@ def page_chat():
                     with col2:
                         # Delete button (small)
                         if st.button(
-                            "🗑️", key=f"delete_{thread['id']}", help="Delete chat"
+                            "X", key=f"delete_{thread['id']}", help="Delete chat"
                         ):
                             delete_thread(thread["id"])
                             save_session_state()  # Save after deleting
@@ -862,13 +862,13 @@ def page_chat():
                         unsafe_allow_html=True,
                     )
 
-                st.markdown("---")
+                # st.markdown("---")
         else:
             st.info("No chat history yet. Start a new conversation!")
 
         # Settings footer
         st.markdown("---")
-        if st.button("⚙️ Settings", key="settings_btn", use_container_width=True):
+        if st.button("Settings", key="settings_btn", use_container_width=True):
             st.session_state.step = 6
             st.rerun()
 
@@ -877,11 +877,11 @@ def page_chat():
 
     with col_center:
         st.markdown(
-            f"<h4 style='text-align:center; margin:0;'>💬 {current_thread['title']}</h4>",
+            f"<h4 class='chat-title'>{current_thread['title']}</h4>",
             unsafe_allow_html=True,
         )
 
-    st.markdown("---")
+    # st.markdown("---")
 
     # Display messages from current thread
     for msg in current_thread["messages"]:
@@ -940,7 +940,7 @@ def page_settings():
         st.session_state.confirm_clear = False
 
     st.markdown(
-        "<h2 style='text-align: center;'>⚙️ Settings & Management</h2>",
+        "<h2 class='settings-title'>Settings & Management</h2>",
         unsafe_allow_html=True,
     )
     st.markdown(
@@ -952,31 +952,40 @@ def page_settings():
 
     # Section 1: API Key Management
     st.markdown(
-        "<h3 style='text-align: center;'>🔑 API Key Management</h3>",
+        "<h3 class='settings-subtitle'>API Key Management</h3>",
         unsafe_allow_html=True,
     )
 
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        current_key = st.session_state.get("api_key", "")
-        display_key = current_key[:15] + "..." if len(current_key) > 15 else current_key
-        if current_key:
-            st.info(f"**Current API Key:** `{display_key}`")
-        else:
-            st.warning("**No API key set**")
+    # col1, col2 = st.columns([2, 1])
+    # with col1:
+    #     current_key = st.session_state.get("api_key", "")
+    #     display_key = current_key[:15] + "..." if len(current_key) > 15 else current_key
+    #     if current_key:
+    #         st.info(f"**Current API Key:** `{display_key}`")
+    #     else:
+    #         st.warning("**No API key set**")
 
-    with col2:
-        if current_key and st.button("🗑️ Remove Key", use_container_width=True):
-            st.session_state.api_key = ""
-            if "OPENAI_API_KEY" in os.environ:
-                del os.environ["OPENAI_API_KEY"]
-            save_session_state()
-            st.success("API key removed!")
-            time.sleep(1)
-            st.rerun()
+    # with col2:
+    #     if current_key and st.button("Remove Key", use_container_width=True):
+    #         st.session_state.api_key = ""
+    #         if "OPENAI_API_KEY" in os.environ:
+    #             del os.environ["OPENAI_API_KEY"]
+    #         save_session_state()
+    #         st.success("API key removed!")
+    #         time.sleep(1)
+    #         st.rerun()
+
+    current_key = st.session_state.get("api_key", "")
+    display_key = current_key[:15] + "..." if len(current_key) > 15 else current_key
+    if current_key:
+        st.info(f"**Current API Key:** `{display_key}`")
+    else:
+        st.warning("**No API key set**")
+
+
 
     # Update API key
-    with st.expander("🔄 Update API Key"):
+    with st.expander("Update API Key"):
         new_api_key = st.text_input(
             "Enter new API key",
             type="password",
@@ -988,42 +997,60 @@ def page_settings():
                 st.session_state.api_key = new_api_key
                 os.environ["OPENAI_API_KEY"] = new_api_key
                 save_session_state()
-                st.success("✅ API key updated successfully!")
+                st.success("API key updated successfully!")
                 time.sleep(1)
                 st.rerun()
             else:
                 st.error("Please enter a valid API key")
 
+    if current_key and st.button("Remove Key", use_container_width=True):
+        st.session_state.api_key = ""
+        if "OPENAI_API_KEY" in os.environ:
+            del os.environ["OPENAI_API_KEY"]
+        save_session_state()
+        st.success("API key removed!")
+        time.sleep(1)
+        st.rerun()
+
     st.markdown("---")
 
     # Section 2: PDF Management
     st.markdown(
-        "<h3 style='text-align: center;'>📚 Textbook Management</h3>",
+        "<h3 class='settings-subtitle'>Textbook Management</h3>",
         unsafe_allow_html=True,
     )
 
     rag_status = (
-        "✅ **Loaded**" if st.session_state.rag is not None else "❌ **Not Loaded**"
+        "**Loaded**" if st.session_state.rag is not None else "**Not Loaded**"
     )
     st.info(f"RAG System Status: {rag_status}")
 
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("📤 Upload New PDF", use_container_width=True, type="primary"):
-            st.session_state.step = 2
-            st.rerun()
+    # col1, col2 = st.columns(2)
+    # with col1:
+    #     if st.button("📤 Upload New PDF", use_container_width=True, type="primary"):
+    #         st.session_state.step = 2
+    #         st.rerun()
 
-    with col2:
-        if st.session_state.rag is not None:
-            st.success("PDF is processed and ready")
-        else:
-            st.warning("No PDF loaded")
+    # with col2:
+    #     if st.session_state.rag is not None:
+    #         st.success("PDF is processed and ready")
+    #     else:
+    #         st.warning("No PDF loaded")
+
+    if st.session_state.rag is not None:
+        st.success("PDF is processed and ready")
+    else:
+        st.warning("No PDF loaded")
+
+    if st.button("Upload New PDF", use_container_width=True, type="primary"):
+        st.session_state.step = 2
+        st.rerun()
 
     st.markdown("---")
 
     # Section 3: Session Management
     st.markdown(
-        "<h3 style='text-align: center;'>💾 Session Management</h3>",
+        "<h3 class='settings-subtitle'>Session Management</h3>",
         unsafe_allow_html=True,
     )
 
@@ -1038,28 +1065,28 @@ def page_settings():
     col1, col2 = st.columns(2)
 
     with col1:
-        if st.button("💾 Save Session", use_container_width=True):
+        if st.button("Save Session", use_container_width=True):
             if save_session_state():
-                st.success("✅ Session saved successfully!")
+                st.success("Session saved successfully!")
                 time.sleep(1)
             else:
-                st.error("❌ Failed to save session")
+                st.error("Failed to save session")
 
     with col2:
         if not st.session_state.confirm_clear:
             if st.button(
-                "🗑️ Clear All Data", use_container_width=True, type="secondary"
+                "Clear All Data", use_container_width=True, type="secondary"
             ):
                 st.session_state.confirm_clear = True
                 st.rerun()
         else:
             # Show confirmation buttons
-            st.warning("⚠️ Are you sure? This will delete everything!")
+            st.warning("Are you sure? This will delete everything!")
             col_yes, col_no = st.columns(2)
 
             with col_yes:
                 if st.button(
-                    "✅ Yes, Clear All", use_container_width=True, type="primary"
+                    "Yes, Clear All", use_container_width=True, type="primary"
                 ):
                     # Clear the session file
                     clear_session_data()
@@ -1087,7 +1114,7 @@ def page_settings():
                     st.rerun()
 
             with col_no:
-                if st.button("❌ Cancel", use_container_width=True, type="secondary"):
+                if st.button("Cancel", use_container_width=True, type="secondary"):
                     st.session_state.confirm_clear = False
                     st.rerun()
 
@@ -1095,7 +1122,7 @@ def page_settings():
 
     # Section 4: Learning Level
     st.markdown(
-        "<h3 style='text-align: center;'>🎯 Learning Level</h3>", unsafe_allow_html=True
+        "<h3 class='settings-subtitle'>Learning Level</h3>", unsafe_allow_html=True
     )
 
     level = st.radio(
@@ -1119,13 +1146,13 @@ def page_settings():
     with col2:
         if st.session_state.rag is not None:
             if st.button(
-                "💬 Continue to Chat", use_container_width=True, type="primary"
+                "Continue to Chat", use_container_width=True, type="primary"
             ):
                 st.session_state.step = 5
                 st.rerun()
         else:
             st.warning("⚠️ Please upload and process a PDF before chatting")
-            if st.button("📚 Go to Upload", use_container_width=True, type="primary"):
+            if st.button("Go to Upload", use_container_width=True, type="primary"):
                 st.session_state.step = 2
                 st.rerun()
 

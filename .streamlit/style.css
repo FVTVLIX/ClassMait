@@ -303,6 +303,62 @@ body {
    CHAT INTERFACE PAGE
    ================================================ */
 
+.st-emotion-cache-467cry .chat-title {
+    color: var(--text-primary);
+    font-family: var(--font-primary);
+    font-size: 2.5rem;
+    font-weight: 700;
+    text-align: center;
+    margin: 0;
+    justify-content: center;
+    align-items: center;
+    display: flex;
+}
+
+/* ================================================
+   SETTINGS PAGE
+   ================================================ */
+
+#settings-and-management {
+    color: var(--text-primary);
+    font-family: var(--font-primary);
+    font-size: 6rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+#api-key-management {
+    color: var(--text-primary);
+    font-family: var(--font-primary);
+    font-size: 3rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+#textbook-management {
+    color: var(--text-primary);
+    font-family: var(--font-primary);
+    font-size: 3rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+#session-management {
+    color: var(--text-primary);
+    font-family: var(--font-primary);
+    font-size: 3rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+#learning-level {
+    color: var(--text-primary);
+    font-family: var(--font-primary);
+    font-size: 3rem;
+    font-weight: 700;
+    text-align: center;
+}
+
 /* ================================================
    MAIN CONTAINER
    ================================================ */
@@ -385,14 +441,14 @@ h1, h2, h3, h4, h5, h6 {
     background-color: var(--dark-border);
     color: var(--white);
     border: none;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     padding: var(--spacing-sm) var(--spacing-md);
     transition: all var(--transition-base);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 100%;
-    text-align: left;
+    max-width: 90%;
+    text-align: center;
     font-weight: 500;
 }
 
@@ -466,7 +522,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .stChatMessage:hover {
     box-shadow: var(--shadow-lg);
-    transform: translateX(2px);
+    transform: translateX(1px);
     transition: all var(--transition-fast);
 }
 
@@ -534,6 +590,13 @@ h1, h2, h3, h4, h5, h6 {
 
 .stRadio p {
     color: var(--text-primary);
+}
+
+.st-emotion-cache-zh2fnc {
+    align-items: center;
+    justify-content: center;
+    display: flex;
+    width:inherit;
 }
 
 /* ================================================
@@ -610,7 +673,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .stChatInput {
-    max-width: 70%;
+    max-width: 100%;
 }
 
 /* ================================================
