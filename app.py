@@ -27,6 +27,8 @@ st.set_page_config(
 from rag_system import (
     RAGSystem,
 )  # <-- keep this file unchanged except for optional api_key param
+from quiz_generator import generate_quiz, quiz_function_schema
+from langchain_openai import ChatOpenAI
 
 # -------------------------------------------------
 #  Session‑state defaults (run only once per session)
@@ -65,6 +67,16 @@ if "messages" not in st.session_state:
     st.session_state.messages = (
         []
     )  # list of dicts: {"role": "user"/"assistant", "content": "..."}
+
+# Quiz state management
+if "current_quiz" not in st.session_state:
+    st.session_state.current_quiz = None  # stores quiz data
+
+if "quiz_answers" not in st.session_state:
+    st.session_state.quiz_answers = {}  # user's selected answers
+
+if "quiz_submitted" not in st.session_state:
+    st.session_state.quiz_submitted = False  # whether quiz has been submitted
 
 
 # -------------------------------------------------
@@ -882,6 +894,121 @@ def page_chat():
         )
 
     # st.markdown("---")
+
+    # Quiz Generation Section
+    with st.expander("📝 Generate Quiz", expanded=st.session_state.current_quiz is not None):
+        st.markdown("Generate a quiz based on the topics discussed or from your textbook!")
+
+        col1, col2 = st.columns([3, 1])
+
+        with col1:
+            quiz_topic = st.text_input(
+                "Enter a topic for the quiz (or leave blank to use recent conversation)",
+                placeholder="e.g., 'photosynthesis' or 'calculus derivatives'",
+                key="quiz_topic_input"
+            )
+
+        with col2:
+            if st.button("Generate Quiz", key="generate_quiz_btn", type="primary", use_container_width=True):
+                # Determine topic and context
+                topic = quiz_topic if quiz_topic else "recent discussion"
+
+                # Get context from recent messages or RAG system
+                context = ""
+                if current_thread["messages"]:
+                    # Use last few messages as context
+                    recent_messages = current_thread["messages"][-4:]
+                    context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in recent_messages])
+                else:
+                    # Use RAG system to get context
+                    if quiz_topic:
+                        retrieved_docs = st.session_state.rag.vector_db.similarity_search(quiz_topic, k=3)
+                        context = "\n".join([doc.page_content for doc in retrieved_docs])
+
+                # Generate quiz
+                with st.spinner("Generating quiz..."):
+                    llm = ChatOpenAI(model="gpt-4", temperature=0.1)
+                    quiz_data = generate_quiz(topic, st.session_state.level, context, llm)
+
+                    if quiz_data:
+                        st.session_state.current_quiz = quiz_data
+                        st.session_state.quiz_answers = {}
+                        st.session_state.quiz_submitted = False
+                        st.success("Quiz generated! Answer the questions below.")
+                        st.rerun()
+                    else:
+                        st.error("Failed to generate quiz. Please try again.")
+
+        # Display quiz if one exists
+        if st.session_state.current_quiz:
+            st.markdown("---")
+            st.markdown("### Your Quiz")
+
+            quiz = st.session_state.current_quiz
+
+            # Display each question
+            for idx, question in enumerate(quiz.get("questions", [])):
+                st.markdown(f"**Question {idx + 1}:** {question['question_text']}")
+
+                # Radio buttons for options
+                selected = st.radio(
+                    "Select your answer:",
+                    options=["A", "B", "C", "D"],
+                    format_func=lambda x: f"{x}. {question['options'][ord(x) - ord('A')]}",
+                    key=f"quiz_q_{idx}",
+                    index=None if f"q_{idx}" not in st.session_state.quiz_answers else ["A", "B", "C", "D"].index(st.session_state.quiz_answers[f"q_{idx}"])
+                )
+
+                if selected:
+                    st.session_state.quiz_answers[f"q_{idx}"] = selected
+
+                # Show explanation if quiz is submitted
+                if st.session_state.quiz_submitted:
+                    correct = question['correct_answer']
+                    user_answer = st.session_state.quiz_answers.get(f"q_{idx}", None)
+
+                    if user_answer == correct:
+                        st.success(f"✅ Correct! The answer is {correct}.")
+                    else:
+                        st.error(f"❌ Incorrect. You selected {user_answer}. The correct answer is {correct}.")
+
+                    st.info(f"**Explanation:** {question['explanation']}")
+
+                st.markdown("---")
+
+            # Submit/Reset buttons
+            col1, col2, col3 = st.columns([1, 1, 1])
+
+            with col1:
+                if not st.session_state.quiz_submitted:
+                    if st.button("Submit Quiz", key="submit_quiz_btn", type="primary", use_container_width=True):
+                        if len(st.session_state.quiz_answers) == len(quiz.get("questions", [])):
+                            st.session_state.quiz_submitted = True
+                            st.rerun()
+                        else:
+                            st.warning("Please answer all questions before submitting!")
+
+            with col2:
+                if st.session_state.quiz_submitted:
+                    # Calculate score
+                    correct_count = 0
+                    total_questions = len(quiz.get("questions", []))
+
+                    for idx, question in enumerate(quiz.get("questions", [])):
+                        if st.session_state.quiz_answers.get(f"q_{idx}") == question['correct_answer']:
+                            correct_count += 1
+
+                    score_percentage = (correct_count / total_questions * 100) if total_questions > 0 else 0
+                    st.metric("Your Score", f"{correct_count}/{total_questions}", f"{score_percentage:.0f}%")
+
+            with col3:
+                if st.button("New Quiz", key="new_quiz_btn", use_container_width=True):
+                    st.session_state.current_quiz = None
+                    st.session_state.quiz_answers = {}
+                    st.session_state.quiz_submitted = False
+                    st.rerun()
+
+    st.markdown("---")
 
     # Display messages from current thread
     for msg in current_thread["messages"]:
