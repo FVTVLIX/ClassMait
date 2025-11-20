@@ -1,6 +1,6 @@
 # main.py
 from rag_system import RAGSystem
-from quiz_generator import generate_quiz  # We'll create this next
+from quiz_generator import generate_quiz
 from dotenv import load_dotenv
 
 load_dotenv()
