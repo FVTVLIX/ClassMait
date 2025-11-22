@@ -795,19 +795,47 @@ def page_chat():
 
     # Add mobile menu toggle button and JavaScript
     st.markdown("""
-        <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
+        <button class="mobile-menu-toggle" id="mobile-menu-btn">
             ☰ Menu
         </button>
-        <div class="mobile-menu-overlay" onclick="toggleMobileMenu()"></div>
+        <div class="mobile-menu-overlay" id="mobile-overlay"></div>
         <script>
-        function toggleMobileMenu() {
-            const sidebar = window.parent.document.querySelector('[data-testid="stSidebar"]');
-            const overlay = window.parent.document.querySelector('.mobile-menu-overlay');
-            if (sidebar && overlay) {
-                sidebar.classList.toggle('mobile-menu-open');
-                overlay.classList.toggle('active');
+        (function() {
+            // Wait for DOM to be ready
+            function initMobileMenu() {
+                const btn = document.getElementById('mobile-menu-btn');
+                const overlay = document.getElementById('mobile-overlay');
+                const sidebar = window.parent.document.querySelector('[data-testid="stSidebar"]');
+
+                if (btn && overlay && sidebar) {
+                    // Remove any existing listeners by cloning
+                    const newBtn = btn.cloneNode(true);
+                    btn.parentNode.replaceChild(newBtn, btn);
+
+                    const newOverlay = overlay.cloneNode(true);
+                    overlay.parentNode.replaceChild(newOverlay, overlay);
+
+                    // Add click listener to button
+                    newBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        sidebar.classList.toggle('mobile-menu-open');
+                        newOverlay.classList.toggle('active');
+                    });
+
+                    // Add click listener to overlay to close menu
+                    newOverlay.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        sidebar.classList.remove('mobile-menu-open');
+                        newOverlay.classList.remove('active');
+                    });
+                }
             }
-        }
+
+            // Run after a short delay to ensure elements are rendered
+            setTimeout(initMobileMenu, 100);
+        })();
         </script>
     """, unsafe_allow_html=True)
 
