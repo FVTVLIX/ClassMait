@@ -936,14 +936,11 @@ def page_chat():
             st.session_state.step = 6
             st.rerun()
 
-    # Main chat area - Navigation bar
-    col_left, col_center, col_right = st.columns([2, 6, 1])
-
-    with col_center:
-        st.markdown(
-            f"<h4 class='chat-title'>{current_thread['title']}</h4>",
-            unsafe_allow_html=True,
-        )
+    # Main chat area - Title (CSS centered, not using columns)
+    st.markdown(
+        f"<h4 class='chat-title'>{current_thread['title']}</h4>",
+        unsafe_allow_html=True,
+    )
 
     # st.markdown("---")
 
