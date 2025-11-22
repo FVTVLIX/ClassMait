@@ -741,67 +741,18 @@ h1, h2, h3, h4, h5, h6 {
 /* ================================================
    MOBILE MENU TOGGLE (Mobile Only)
    ================================================ */
+/* Hide mobile menu elements by default (desktop) */
+.mobile-menu-toggle {
+    display: none;
+}
+
+.mobile-menu-overlay {
+    display: none;
+}
+
 @media (max-width: 768px) {
 
     /* Hide sidebar by default on mobile */
-    [data-testid="stSidebar"] {
-        position: fixed;
-        left: -100%;
-        top: 0;
-        bottom: 0;
-        width: 80%;
-        max-width: 300px;
-        min-width: 280px;
-        z-index: 1000;
-        transition: left var(--transition-base);
-    }
-
-    /* Show sidebar when menu is open */
-    [data-testid="stSidebar"].mobile-menu-open {
-        left: 0;
-    }
-
-    /* Mobile overlay */
-    .mobile-menu-overlay {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 999;
-        animation: fadeIn 0.3s ease;
-    }
-
-    .mobile-menu-overlay.active {
-        display: block;
-    }
-
-    /* Show mobile menu button */
-    .mobile-menu-toggle {
-        display: block;
-        position: fixed;
-        top: 1rem;
-        left: 1rem;
-        z-index: 1001;
-        background-color: var(--primary-color);
-        color: white;
-        border: none;
-        border-radius: var(--radius-md);
-        padding: 0.75rem 1rem;
-        font-size: 1rem;
-        cursor: pointer;
-        box-shadow: var(--shadow-lg);
-        transition: all var(--transition-base);
-    }
-
-    .mobile-menu-toggle:hover {
-        background-color: var(--secondary-color);
-        transform: scale(1.05);
-    }
-
-        /* Hide sidebar by default on mobile */
     [data-testid="stSidebar"] {
         position: fixed;
         left: -100%;
