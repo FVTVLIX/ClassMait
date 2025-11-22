@@ -806,40 +806,65 @@ def page_chat():
     components.html("""
         <script>
         (function() {
-            function initMobileMenu() {
-                // Access elements in the parent Streamlit document
-                const parentDoc = window.parent.document;
-                const btn = parentDoc.getElementById('mobile-menu-btn');
-                const overlay = parentDoc.getElementById('mobile-overlay');
+            const parentDoc = window.parent.document;
+
+            function toggleSidebar() {
                 const sidebar = parentDoc.querySelector('[data-testid="stSidebar"]');
+                const overlay = parentDoc.getElementById('mobile-overlay');
 
-                if (btn && overlay && sidebar) {
-                    // Only add listeners if not already added
-                    if (!btn.dataset.initialized) {
-                        btn.dataset.initialized = 'true';
-
-                        btn.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            sidebar.classList.toggle('mobile-menu-open');
-                            overlay.classList.toggle('active');
-                        });
-
-                        overlay.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            sidebar.classList.remove('mobile-menu-open');
-                            overlay.classList.remove('active');
-                        });
+                if (sidebar && overlay) {
+                    const isOpen = sidebar.classList.contains('mobile-menu-open');
+                    if (isOpen) {
+                        sidebar.classList.remove('mobile-menu-open');
+                        overlay.classList.remove('active');
+                    } else {
+                        sidebar.classList.add('mobile-menu-open');
+                        overlay.classList.add('active');
                     }
-                } else {
-                    // Elements not ready, retry
-                    setTimeout(initMobileMenu, 100);
                 }
             }
 
-            // Start initialization
-            setTimeout(initMobileMenu, 200);
+            function closeSidebar() {
+                const sidebar = parentDoc.querySelector('[data-testid="stSidebar"]');
+                const overlay = parentDoc.getElementById('mobile-overlay');
+
+                if (sidebar && overlay) {
+                    sidebar.classList.remove('mobile-menu-open');
+                    overlay.classList.remove('active');
+                }
+            }
+
+            // Use event delegation on the document body for reliability
+            function setupEventDelegation() {
+                // Remove any existing listeners first
+                parentDoc.body.removeEventListener('click', handleClick, true);
+                parentDoc.body.addEventListener('click', handleClick, true);
+            }
+
+            function handleClick(e) {
+                const btn = e.target.closest('#mobile-menu-btn');
+                const overlay = e.target.closest('#mobile-overlay');
+
+                if (btn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleSidebar();
+                } else if (overlay) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    closeSidebar();
+                }
+            }
+
+            // Initialize
+            setupEventDelegation();
+
+            // Re-setup on any DOM changes (Streamlit rerenders)
+            const observer = new MutationObserver(function() {
+                setupEventDelegation();
+            });
+
+            observer.observe(parentDoc.body, { childList: true, subtree: true });
         })();
         </script>
     """, height=0)
