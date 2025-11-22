@@ -945,32 +945,50 @@ def page_chat():
             st.markdown("### Your Quiz")
 
             quiz = st.session_state.current_quiz
+            questions = quiz.get("questions", [])
 
             # Display each question
-            for idx, question in enumerate(quiz.get("questions", [])):
+            for idx, question in enumerate(questions):
+                q_key = f"quiz_q_{idx}"
+                options = question['options']
+
                 st.markdown(f"**Question {idx + 1}:** {question['question_text']}")
 
-                # Radio buttons for options
+                # Build option labels
+                option_labels = [f"{chr(65+i)}. {options[i]}" for i in range(len(options))]
+
+                # Get current selection from session state
+                current_selection = st.session_state.quiz_answers.get(f"q_{idx}")
+                current_index = None
+                if current_selection:
+                    try:
+                        current_index = ["A", "B", "C", "D"].index(current_selection)
+                    except ValueError:
+                        current_index = None
+
+                # Radio buttons for options - use on_change to prevent flicker
                 selected = st.radio(
                     "Select your answer:",
-                    options=["A", "B", "C", "D"],
-                    format_func=lambda x: f"{x}. {question['options'][ord(x) - ord('A')]}",
-                    key=f"quiz_q_{idx}",
-                    index=None if f"q_{idx}" not in st.session_state.quiz_answers else ["A", "B", "C", "D"].index(st.session_state.quiz_answers[f"q_{idx}"])
+                    options=option_labels,
+                    key=q_key,
+                    index=current_index,
+                    label_visibility="collapsed"
                 )
 
+                # Store answer based on selection (extract letter from "A. ...")
                 if selected:
-                    st.session_state.quiz_answers[f"q_{idx}"] = selected
+                    answer_letter = selected[0]
+                    st.session_state.quiz_answers[f"q_{idx}"] = answer_letter
 
                 # Show explanation if quiz is submitted
                 if st.session_state.quiz_submitted:
                     correct = question['correct_answer']
-                    user_answer = st.session_state.quiz_answers.get(f"q_{idx}", None)
+                    user_answer = st.session_state.quiz_answers.get(f"q_{idx}")
 
                     if user_answer == correct:
-                        st.success(f"✅ Correct! The answer is {correct}.")
+                        st.success(f"Correct! The answer is {correct}.")
                     else:
-                        st.error(f"❌ Incorrect. You selected {user_answer}. The correct answer is {correct}.")
+                        st.error(f"Incorrect. You selected {user_answer}. The correct answer is {correct}.")
 
                     st.info(f"**Explanation:** {question['explanation']}")
 
@@ -982,7 +1000,9 @@ def page_chat():
             with col1:
                 if not st.session_state.quiz_submitted:
                     if st.button("Submit Quiz", key="submit_quiz_btn", type="primary", use_container_width=True):
-                        if len(st.session_state.quiz_answers) == len(quiz.get("questions", [])):
+                        # Count answered questions
+                        answered = sum(1 for i in range(len(questions)) if st.session_state.quiz_answers.get(f"q_{i}"))
+                        if answered == len(questions):
                             st.session_state.quiz_submitted = True
                             st.rerun()
                         else:
@@ -991,18 +1011,20 @@ def page_chat():
             with col2:
                 if st.session_state.quiz_submitted:
                     # Calculate score
-                    correct_count = 0
-                    total_questions = len(quiz.get("questions", []))
-
-                    for idx, question in enumerate(quiz.get("questions", [])):
-                        if st.session_state.quiz_answers.get(f"q_{idx}") == question['correct_answer']:
-                            correct_count += 1
-
+                    correct_count = sum(
+                        1 for idx, q in enumerate(questions)
+                        if st.session_state.quiz_answers.get(f"q_{idx}") == q['correct_answer']
+                    )
+                    total_questions = len(questions)
                     score_percentage = (correct_count / total_questions * 100) if total_questions > 0 else 0
                     st.metric("Your Score", f"{correct_count}/{total_questions}", f"{score_percentage:.0f}%")
 
             with col3:
                 if st.button("New Quiz", key="new_quiz_btn", use_container_width=True):
+                    # Clear quiz-related keys from session state
+                    keys_to_remove = [k for k in st.session_state.keys() if k.startswith("quiz_q_")]
+                    for k in keys_to_remove:
+                        del st.session_state[k]
                     st.session_state.current_quiz = None
                     st.session_state.quiz_answers = {}
                     st.session_state.quiz_submitted = False
