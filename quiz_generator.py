@@ -1,34 +1,31 @@
 import json
 from langchain_core.messages import HumanMessage, SystemMessage
 
-# Updated schema format for newer OpenAI API
+# Function schema for OpenAI function calling (without wrapper - bind_functions adds it)
 quiz_function_schema = {
-    "type": "function",
-    "function": {
-        "name": "generate_quiz",
-        "description": "Generates a multiple choice quiz object based on the discussed topic and user level.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "questions": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "question_text": {"type": "string"},
-                            "options": {
-                                "type": "array",
-                                "items": {"type": "string"}
-                            },
-                            "correct_answer": {"type": "string", "description": "The letter of the correct option (e.g., 'A')"},
-                            "explanation": {"type": "string", "description": "A brief explanation of why the correct answer is right."}
+    "name": "generate_quiz",
+    "description": "Generates a multiple choice quiz object based on the discussed topic and user level.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "questions": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "question_text": {"type": "string"},
+                        "options": {
+                            "type": "array",
+                            "items": {"type": "string"}
                         },
-                        "required": ["question_text", "options", "correct_answer", "explanation"]
-                    }
+                        "correct_answer": {"type": "string", "description": "The letter of the correct option (e.g., 'A')"},
+                        "explanation": {"type": "string", "description": "A brief explanation of why the correct answer is right."}
+                    },
+                    "required": ["question_text", "options", "correct_answer", "explanation"]
                 }
-            },
-            "required": ["questions"]
-        }
+            }
+        },
+        "required": ["questions"]
     }
 }
 
@@ -49,13 +46,14 @@ def generate_quiz(topic, user_level, context, llm):
 - You MUST call the `generate_quiz` function.
 """
     try:
-        llm_with_tools = llm.bind_tools([quiz_function_schema])
-        response = llm_with_tools.invoke([
+        # Use bind with functions parameter (older but more reliable method)
+        llm_with_functions = llm.bind(functions=[quiz_function_schema], function_call={"name": "generate_quiz"})
+        response = llm_with_functions.invoke([
             SystemMessage(content="You are a helpful quiz generator."),
             HumanMessage(content=prompt)
         ])
-        # Extract the JSON arguments from the tool call
-        quiz_json_str = response.additional_kwargs['tool_calls'][0]['function']['arguments']
+        # Extract the JSON arguments from the function call
+        quiz_json_str = response.additional_kwargs['function_call']['arguments']
         return json.loads(quiz_json_str)
     except Exception as e:
         print(f"Error generating quiz: {e}")
