@@ -425,8 +425,22 @@ h1, h2, h3, h4, h5, h6 {
     animation: slideInFromLeft var(--transition-base);
 }
 
+/* Force sidebar to always be visible on desktop */
+[data-testid="stSidebar"][aria-expanded="false"] {
+    display: block !important;
+    width: 250px !important;
+    min-width: 250px !important;
+    margin-left: 0 !important;
+    transform: none !important;
+}
+
 /* Hide collapse button - sidebar always visible on desktop */
 [data-testid="collapsedControl"] {
+    display: none !important;
+}
+
+/* Hide the sidebar close button on desktop */
+[data-testid="stSidebar"] button[kind="header"] {
     display: none !important;
 }
 
@@ -754,20 +768,34 @@ h1, h2, h3, h4, h5, h6 {
 
     /* Hide sidebar by default on mobile */
     [data-testid="stSidebar"] {
-        position: fixed;
-        left: -100%;
-        top: 0;
-        bottom: 0;
-        width: 80%;
-        max-width: 300px;
-        min-width: 280px;
-        z-index: 1000;
-        transition: left var(--transition-base);
+        position: fixed !important;
+        left: -100% !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        width: 80% !important;
+        max-width: 300px !important;
+        min-width: 280px !important;
+        z-index: 1000 !important;
+        transition: left 0.3s ease !important;
+        transform: none !important;
+        margin-left: 0 !important;
+    }
+
+    /* Override any aria-expanded styles on mobile */
+    [data-testid="stSidebar"][aria-expanded="false"] {
+        left: -100% !important;
+        display: block !important;
+        width: 80% !important;
+        max-width: 300px !important;
     }
 
     /* Show sidebar when menu is open */
     [data-testid="stSidebar"].mobile-menu-open {
-        left: 0;
+        left: 0 !important;
+    }
+
+    [data-testid="stSidebar"].mobile-menu-open[aria-expanded="false"] {
+        left: 0 !important;
     }
 
     /* Mobile overlay */
@@ -780,7 +808,6 @@ h1, h2, h3, h4, h5, h6 {
         bottom: 0;
         background: rgba(0, 0, 0, 0.5);
         z-index: 999;
-        animation: fadeIn 0.3s ease;
     }
 
     .mobile-menu-overlay.active {
