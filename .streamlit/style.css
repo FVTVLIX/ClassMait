@@ -678,6 +678,64 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ================================================
+   QUIZ SECTION
+   ================================================ */
+.quiz-generator-section {
+    margin-bottom: var(--spacing-lg);
+}
+
+.quiz-stats-box {
+    background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    border: 1px solid #3d3d5c;
+    margin-top: var(--spacing-md);
+}
+
+.stats-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #e2e8f0;
+    margin-bottom: var(--spacing-md);
+    text-align: center;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-md);
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--spacing-sm);
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-md);
+}
+
+.stat-label {
+    color: #94a3b8;
+    font-size: 0.75rem;
+    margin-bottom: 4px;
+}
+
+.stat-value {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #ffffff;
+}
+
+.stat-correct {
+    color: #4ade80 !important;
+}
+
+.stat-incorrect {
+    color: #f87171 !important;
+}
+
+/* ================================================
    CHAT INPUT
    ================================================ */
 .stChatInputContainer {
@@ -866,6 +924,33 @@ h1, h2, h3, h4, h5, h6 {
         max-width: 100%;
         width: 100%;
         font-size: 0.9rem;
+    }
+
+    /* Quiz section mobile styles */
+    .quiz-stats-box {
+        padding: var(--spacing-md);
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--spacing-sm);
+    }
+
+    .stat-item {
+        padding: var(--spacing-xs);
+    }
+
+    .stat-label {
+        font-size: 0.65rem;
+    }
+
+    .stat-value {
+        font-size: 0.95rem;
+    }
+
+    .stExpander {
+        max-width: 100%;
+        margin: var(--spacing-sm) 0;
     }
 
     /* Typography */
