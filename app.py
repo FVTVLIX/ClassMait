@@ -27,6 +27,8 @@ st.set_page_config(
 from rag_system import (
     RAGSystem,
 )  # <-- keep this file unchanged except for optional api_key param
+from quiz_generator import generate_quiz, quiz_function_schema
+from langchain_openai import ChatOpenAI
 
 # -------------------------------------------------
 #  Session‑state defaults (run only once per session)
@@ -66,6 +68,24 @@ if "messages" not in st.session_state:
         []
     )  # list of dicts: {"role": "user"/"assistant", "content": "..."}
 
+# Quiz state management
+if "current_quiz" not in st.session_state:
+    st.session_state.current_quiz = None  # stores quiz data
+
+if "quiz_answers" not in st.session_state:
+    st.session_state.quiz_answers = {}  # user's selected answers
+
+if "quiz_submitted" not in st.session_state:
+    st.session_state.quiz_submitted = False  # whether quiz has been submitted
+
+# Quiz statistics tracking
+if "quiz_stats" not in st.session_state:
+    st.session_state.quiz_stats = {
+        "total_quizzes": 0,
+        "total_correct": 0,
+        "total_incorrect": 0
+    }
+
 
 # -------------------------------------------------
 #  Helper: write uploaded file to a *named* temp file
@@ -100,6 +120,11 @@ def save_session_state():
             "uploaded_path": None,  # Don't save temp paths
             "rag_initialized": st.session_state.rag
             is not None,  # Track if RAG was set up
+            "quiz_stats": st.session_state.get("quiz_stats", {
+                "total_quizzes": 0,
+                "total_correct": 0,
+                "total_incorrect": 0
+            }),
         }
 
         with open(SESSION_FILE, "w") as f:
@@ -127,6 +152,12 @@ def load_session_state():
             st.session_state.current_thread_id = saved_state.get(
                 "current_thread_id", None
             )
+            # Load quiz statistics
+            st.session_state.quiz_stats = saved_state.get("quiz_stats", {
+                "total_quizzes": 0,
+                "total_correct": 0,
+                "total_incorrect": 0
+            })
 
             # If we have an API key and chat history, skip to chat page
             # BUT only if RAG was initialized (otherwise go to upload page)
@@ -882,6 +913,273 @@ def page_chat():
         )
 
     # st.markdown("---")
+
+    # Quiz Generation Section
+    with st.expander("📝 Generate Quiz", expanded=st.session_state.current_quiz is not None):
+        # Anchor for scrolling to quiz
+        st.markdown('<div id="quiz-section"></div>', unsafe_allow_html=True)
+
+        # Main layout: Quiz content on left, stats on right
+        quiz_col, stats_col = st.columns([3, 1])
+
+        with stats_col:
+            # Stats box styling and content
+            stats = st.session_state.quiz_stats
+            total_answers = stats["total_correct"] + stats["total_incorrect"]
+            correct_pct = (stats["total_correct"] / total_answers * 100) if total_answers > 0 else 0
+            incorrect_pct = (stats["total_incorrect"] / total_answers * 100) if total_answers > 0 else 0
+
+            st.markdown("""
+                <style>
+                .quiz-stats-box {
+                    background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+                    border-radius: 12px;
+                    padding: 15px;
+                    border: 1px solid #3d3d5c;
+                }
+                .stats-title {
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: #a0a0b0;
+                    margin-bottom: 12px;
+                    text-align: center;
+                }
+                .stat-item {
+                    display: flex;
+                    justify-content: space-between;
+                    margin: 8px 0;
+                    font-size: 13px;
+                }
+                .stat-label {
+                    color: #b0b0c0;
+                }
+                .stat-value {
+                    font-weight: 600;
+                    color: #ffffff;
+                }
+                .stat-correct {
+                    color: #4ade80 !important;
+                }
+                .stat-incorrect {
+                    color: #f87171 !important;
+                }
+                .stat-divider {
+                    border-top: 1px solid #3d3d5c;
+                    margin: 10px 0;
+                }
+                </style>
+            """, unsafe_allow_html=True)
+
+            st.markdown(f"""
+                <div class="quiz-stats-box">
+                    <div class="stats-title">Quiz Statistics</div>
+                    <div class="stat-item">
+                        <span class="stat-label">Quizzes Taken</span>
+                        <span class="stat-value">{stats["total_quizzes"]}</span>
+                    </div>
+                    <div class="stat-divider"></div>
+                    <div class="stat-item">
+                        <span class="stat-label">Correct</span>
+                        <span class="stat-value stat-correct">{stats["total_correct"]} ({correct_pct:.0f}%)</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Incorrect</span>
+                        <span class="stat-value stat-incorrect">{stats["total_incorrect"]} ({incorrect_pct:.0f}%)</span>
+                    </div>
+                    <div class="stat-divider"></div>
+                    <div class="stat-item">
+                        <span class="stat-label">Total Answers</span>
+                        <span class="stat-value">{total_answers}</span>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+
+        with quiz_col:
+            st.markdown("Generate a quiz based on the topics discussed or from your textbook!")
+
+            input_col1, input_col2 = st.columns([3, 1])
+
+            with input_col1:
+                quiz_topic = st.text_input(
+                    "Enter a topic for the quiz (or leave blank to use recent conversation)",
+                    placeholder="e.g., 'photosynthesis' or 'calculus derivatives'",
+                    key="quiz_topic_input"
+                )
+
+            with input_col2:
+                if st.button("Generate Quiz", key="generate_quiz_btn", type="primary", use_container_width=True):
+                    # Determine topic and context
+                    topic = quiz_topic if quiz_topic else "recent discussion"
+
+                    # Get context from recent messages or RAG system
+                    context = ""
+                    if current_thread["messages"]:
+                        # Use last few messages as context
+                        recent_messages = current_thread["messages"][-4:]
+                        context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in recent_messages])
+                    else:
+                        # Use RAG system to get context
+                        if quiz_topic:
+                            retrieved_docs = st.session_state.rag.vector_db.similarity_search(quiz_topic, k=3)
+                            context = "\n".join([doc.page_content for doc in retrieved_docs])
+
+                    # Generate quiz
+                    with st.spinner("Generating quiz..."):
+                        quiz_data = generate_quiz(topic, st.session_state.level, context, None)
+
+                        if quiz_data:
+                            st.session_state.current_quiz = quiz_data
+                            st.session_state.quiz_answers = {}
+                            st.session_state.quiz_submitted = False
+                            # Clear any existing radio button keys
+                            for k in list(st.session_state.keys()):
+                                if k.startswith("quiz_q_"):
+                                    del st.session_state[k]
+                            st.rerun()
+                        else:
+                            st.error("Failed to generate quiz. Please try again.")
+
+        # Display quiz if one exists
+        if st.session_state.current_quiz:
+            st.markdown("---")
+
+            # JavaScript to scroll to quiz section
+            st.markdown("""
+                <script>
+                    window.addEventListener('load', function() {
+                        var quizSection = document.getElementById('quiz-section');
+                        if (quizSection) {
+                            quizSection.scrollIntoView({behavior: 'smooth', block: 'start'});
+                        }
+                    });
+                </script>
+            """, unsafe_allow_html=True)
+
+            st.markdown("### Your Quiz")
+
+            quiz = st.session_state.current_quiz
+            questions = quiz.get("questions", [])
+
+            # Helper function to clean option text
+            def clean_option(opt):
+                cleaned = opt.strip()
+                # Strip leading letter patterns like "A. ", "A: ", "A) "
+                if len(cleaned) > 2 and cleaned[0].upper() in "ABCD" and cleaned[1] in ".:) ":
+                    cleaned = cleaned[2:].strip()
+                elif len(cleaned) > 3 and cleaned[0].upper() in "ABCD" and cleaned[1:3] in [". ", ": ", ") "]:
+                    cleaned = cleaned[3:].strip()
+                return cleaned
+
+            # If quiz is already submitted, show results (locked)
+            if st.session_state.quiz_submitted:
+                for idx, question in enumerate(questions):
+                    st.markdown(f"**Question {idx + 1}:** {question['question_text']}")
+
+                    # Get options and clean them
+                    options = question['options']
+                    cleaned_options = [clean_option(opt) for opt in options]
+                    display_options = [f"{chr(65+i)}. {cleaned_options[i]}" for i in range(len(cleaned_options))]
+
+                    # Show locked answer (disabled radio)
+                    user_answer = st.session_state.quiz_answers.get(f"q_{idx}")
+                    answer_idx = ord(user_answer) - ord("A") if user_answer in ["A", "B", "C", "D"] else 0
+
+                    st.radio(
+                        f"Q{idx + 1}",
+                        options=display_options,
+                        key=f"quiz_result_{idx}",
+                        index=answer_idx,
+                        disabled=True,
+                        label_visibility="collapsed"
+                    )
+
+                    # Show feedback
+                    correct = question['correct_answer']
+                    if user_answer == correct:
+                        st.success(f"Correct! The answer is {correct}.")
+                    else:
+                        st.error(f"Incorrect. You selected {user_answer}. The correct answer is {correct}.")
+
+                    st.info(f"**Explanation:** {question['explanation']}")
+                    st.markdown("---")
+
+                # Show score and New Quiz button
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    correct_count = sum(
+                        1 for idx, q in enumerate(questions)
+                        if st.session_state.quiz_answers.get(f"q_{idx}") == q['correct_answer']
+                    )
+                    total_questions = len(questions)
+                    score_percentage = (correct_count / total_questions * 100) if total_questions > 0 else 0
+                    st.metric("Your Score", f"{correct_count}/{total_questions}", f"{score_percentage:.0f}%")
+
+                with col2:
+                    if st.button("New Quiz", key="new_quiz_btn", use_container_width=True):
+                        # Clear quiz-related keys from session state
+                        for k in list(st.session_state.keys()):
+                            if k.startswith("quiz_q_") or k.startswith("quiz_result_"):
+                                del st.session_state[k]
+                        st.session_state.current_quiz = None
+                        st.session_state.quiz_answers = {}
+                        st.session_state.quiz_submitted = False
+                        st.rerun()
+
+            else:
+                # Quiz not submitted - use form to prevent flickering
+                with st.form(key="quiz_form"):
+                    for idx, question in enumerate(questions):
+                        st.markdown(f"**Question {idx + 1}:** {question['question_text']}")
+
+                        # Get options and clean them
+                        options = question['options']
+                        cleaned_options = [clean_option(opt) for opt in options]
+                        display_options = [f"{chr(65+i)}. {cleaned_options[i]}" for i in range(len(cleaned_options))]
+
+                        # Radio buttons for options (inside form - no rerun on selection)
+                        st.radio(
+                            f"Q{idx + 1}",
+                            options=display_options,
+                            key=f"quiz_q_{idx}",
+                            index=None,
+                            label_visibility="collapsed"
+                        )
+                        st.markdown("---")
+
+                    # Submit button inside form
+                    submitted = st.form_submit_button("Submit Quiz", type="primary", use_container_width=True)
+
+                    if submitted:
+                        # Collect answers from form
+                        all_answered = True
+                        for idx in range(len(questions)):
+                            form_key = f"quiz_q_{idx}"
+                            if form_key in st.session_state and st.session_state[form_key]:
+                                answer_letter = st.session_state[form_key][0]
+                                st.session_state.quiz_answers[f"q_{idx}"] = answer_letter
+                            else:
+                                all_answered = False
+
+                        if all_answered and len(st.session_state.quiz_answers) == len(questions):
+                            # Update quiz statistics
+                            correct_count = sum(
+                                1 for idx, q in enumerate(questions)
+                                if st.session_state.quiz_answers.get(f"q_{idx}") == q['correct_answer']
+                            )
+                            incorrect_count = len(questions) - correct_count
+
+                            st.session_state.quiz_stats["total_quizzes"] += 1
+                            st.session_state.quiz_stats["total_correct"] += correct_count
+                            st.session_state.quiz_stats["total_incorrect"] += incorrect_count
+
+                            st.session_state.quiz_submitted = True
+                            save_session_state()  # Save stats to persist
+                            st.rerun()
+                        else:
+                            st.warning("Please answer all questions before submitting!")
+
+    st.markdown("---")
 
     # Display messages from current thread
     for msg in current_thread["messages"]:
