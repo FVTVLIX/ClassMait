@@ -897,6 +897,9 @@ def page_chat():
 
     # Quiz Generation Section
     with st.expander("📝 Generate Quiz", expanded=st.session_state.current_quiz is not None):
+        # Anchor for scrolling to quiz
+        st.markdown('<div id="quiz-section"></div>', unsafe_allow_html=True)
+
         st.markdown("Generate a quiz based on the topics discussed or from your textbook!")
 
         col1, col2 = st.columns([3, 1])
@@ -927,14 +930,16 @@ def page_chat():
 
                 # Generate quiz
                 with st.spinner("Generating quiz..."):
-                    llm = ChatOpenAI(model="gpt-4", temperature=0.1)
-                    quiz_data = generate_quiz(topic, st.session_state.level, context, llm)
+                    quiz_data = generate_quiz(topic, st.session_state.level, context, None)
 
                     if quiz_data:
                         st.session_state.current_quiz = quiz_data
                         st.session_state.quiz_answers = {}
                         st.session_state.quiz_submitted = False
-                        st.success("Quiz generated! Answer the questions below.")
+                        # Clear any existing radio button keys
+                        for k in list(st.session_state.keys()):
+                            if k.startswith("quiz_q_"):
+                                del st.session_state[k]
                         st.rerun()
                     else:
                         st.error("Failed to generate quiz. Please try again.")
@@ -942,43 +947,63 @@ def page_chat():
         # Display quiz if one exists
         if st.session_state.current_quiz:
             st.markdown("---")
+
+            # JavaScript to scroll to quiz section
+            st.markdown("""
+                <script>
+                    window.addEventListener('load', function() {
+                        var quizSection = document.getElementById('quiz-section');
+                        if (quizSection) {
+                            quizSection.scrollIntoView({behavior: 'smooth', block: 'start'});
+                        }
+                    });
+                </script>
+            """, unsafe_allow_html=True)
+
             st.markdown("### Your Quiz")
 
             quiz = st.session_state.current_quiz
             questions = quiz.get("questions", [])
 
+            # Helper function to clean option text
+            def clean_option(opt):
+                cleaned = opt.strip()
+                # Strip leading letter patterns like "A. ", "A: ", "A) "
+                if len(cleaned) > 2 and cleaned[0].upper() in "ABCD" and cleaned[1] in ".:) ":
+                    cleaned = cleaned[2:].strip()
+                elif len(cleaned) > 3 and cleaned[0].upper() in "ABCD" and cleaned[1:3] in [". ", ": ", ") "]:
+                    cleaned = cleaned[3:].strip()
+                return cleaned
+
             # Display each question
             for idx, question in enumerate(questions):
-                q_key = f"quiz_q_{idx}"
-                options = question['options']
-
                 st.markdown(f"**Question {idx + 1}:** {question['question_text']}")
 
-                # Clean options - remove any existing letter prefix if present
-                clean_options = []
-                for i, opt in enumerate(options):
-                    # Strip leading letter patterns like "A. ", "A: ", "A) "
-                    cleaned = opt.strip()
-                    if len(cleaned) > 2 and cleaned[0].upper() in "ABCD" and cleaned[1] in ".:) ":
-                        cleaned = cleaned[2:].strip()
-                    if len(cleaned) > 3 and cleaned[0].upper() in "ABCD" and cleaned[1:3] in [". ", ": ", ") "]:
-                        cleaned = cleaned[3:].strip()
-                    clean_options.append(f"{chr(65+i)}. {cleaned}")
+                # Get options and clean them
+                options = question['options']
+                cleaned_options = [clean_option(opt) for opt in options]
 
-                # Determine default index - use stored answer or None for no selection
-                default_index = None
+                # Create display options with letters
+                display_options = [f"{chr(65+i)}. {cleaned_options[i]}" for i in range(len(cleaned_options))]
+
+                # Get stored answer index
                 stored_answer = st.session_state.quiz_answers.get(f"q_{idx}")
-                if stored_answer and stored_answer in ["A", "B", "C", "D"]:
-                    default_index = ["A", "B", "C", "D"].index(stored_answer)
+                default_idx = None
+                if stored_answer in ["A", "B", "C", "D"]:
+                    default_idx = ord(stored_answer) - ord("A")
 
-                # Radio buttons - let Streamlit handle state via key
-                st.radio(
-                    f"Question {idx + 1}",
-                    options=clean_options,
-                    key=q_key,
-                    index=default_index,
+                # Radio buttons for options
+                selected = st.radio(
+                    f"Q{idx + 1}",
+                    options=display_options,
+                    key=f"quiz_q_{idx}",
+                    index=default_idx,
                     label_visibility="collapsed"
                 )
+
+                # Store answer when selected
+                if selected:
+                    st.session_state.quiz_answers[f"q_{idx}"] = selected[0]
 
                 # Show explanation if quiz is submitted
                 if st.session_state.quiz_submitted:
@@ -1000,17 +1025,7 @@ def page_chat():
             with col1:
                 if not st.session_state.quiz_submitted:
                     if st.button("Submit Quiz", key="submit_quiz_btn", type="primary", use_container_width=True):
-                        # Collect answers from radio button keys
-                        for idx in range(len(questions)):
-                            form_key = f"quiz_q_{idx}"
-                            if form_key in st.session_state and st.session_state[form_key]:
-                                # Extract letter from "A. ..."
-                                answer_letter = st.session_state[form_key][0]
-                                st.session_state.quiz_answers[f"q_{idx}"] = answer_letter
-
-                        # Check all answered
-                        answered = sum(1 for i in range(len(questions)) if st.session_state.quiz_answers.get(f"q_{i}"))
-                        if answered == len(questions):
+                        if len(st.session_state.quiz_answers) == len(questions):
                             st.session_state.quiz_submitted = True
                             st.rerun()
                         else:
@@ -1030,9 +1045,9 @@ def page_chat():
             with col3:
                 if st.button("New Quiz", key="new_quiz_btn", use_container_width=True):
                     # Clear quiz-related keys from session state
-                    keys_to_remove = [k for k in list(st.session_state.keys()) if k.startswith("quiz_q_")]
-                    for k in keys_to_remove:
-                        del st.session_state[k]
+                    for k in list(st.session_state.keys()):
+                        if k.startswith("quiz_q_"):
+                            del st.session_state[k]
                     st.session_state.current_quiz = None
                     st.session_state.quiz_answers = {}
                     st.session_state.quiz_submitted = False
