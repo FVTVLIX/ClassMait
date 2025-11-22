@@ -1,7 +1,8 @@
 import json
-from langchain_core.messages import HumanMessage, SystemMessage
+import os
+from openai import OpenAI
 
-# Function schema for OpenAI function calling (without wrapper - bind_functions adds it)
+# Function schema for OpenAI function calling
 quiz_function_schema = {
     "name": "generate_quiz",
     "description": "Generates a multiple choice quiz object based on the discussed topic and user level.",
@@ -30,8 +31,8 @@ quiz_function_schema = {
 }
 
 
-def generate_quiz(topic, user_level, context, llm):
-    """Generates a quiz JSON object based on the topic and context."""
+def generate_quiz(topic, user_level, context, llm=None):
+    """Generates a quiz JSON object based on the topic and context using OpenAI directly."""
 
     prompt = f"""Based on the context below, generate a multiple-choice quiz about '{topic}' for a {user_level} level student.
 
@@ -43,17 +44,29 @@ def generate_quiz(topic, user_level, context, llm):
 - Each question must have 4 options (A, B, C, D).
 - The correct answer must be a single letter (e.g., 'A').
 - Provide a clear explanation for the correct answer.
-- You MUST call the `generate_quiz` function.
 """
     try:
-        # Use bind with functions parameter (older but more reliable method)
-        llm_with_functions = llm.bind(functions=[quiz_function_schema], function_call={"name": "generate_quiz"})
-        response = llm_with_functions.invoke([
-            SystemMessage(content="You are a helpful quiz generator."),
-            HumanMessage(content=prompt)
-        ])
-        # Extract the JSON arguments from the function call
-        quiz_json_str = response.additional_kwargs['function_call']['arguments']
+        # Use OpenAI client directly for more control
+        client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are a helpful quiz generator. Always use the generate_quiz function to return your response."},
+                {"role": "user", "content": prompt}
+            ],
+            tools=[
+                {
+                    "type": "function",
+                    "function": quiz_function_schema
+                }
+            ],
+            tool_choice={"type": "function", "function": {"name": "generate_quiz"}}
+        )
+
+        # Extract the JSON arguments from the tool call
+        tool_call = response.choices[0].message.tool_calls[0]
+        quiz_json_str = tool_call.function.arguments
         return json.loads(quiz_json_str)
     except Exception as e:
         print(f"Error generating quiz: {e}")
