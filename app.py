@@ -9,6 +9,7 @@ import json
 import uuid
 from datetime import datetime
 import streamlit as st
+import streamlit.components.v1 as components
 from pathlib import Path
 
 # -------------------------------------------------
@@ -793,23 +794,80 @@ def page_chat():
     if "processing_response" not in st.session_state:
         st.session_state.processing_response = False
 
-    # Add mobile menu toggle button and JavaScript
+    # Add mobile menu toggle button (HTML only, no JS here)
     st.markdown("""
-        <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
+        <button class="mobile-menu-toggle" id="mobile-menu-btn">
             ☰ Menu
         </button>
-        <div class="mobile-menu-overlay" onclick="toggleMobileMenu()"></div>
-        <script>
-        function toggleMobileMenu() {
-            const sidebar = window.parent.document.querySelector('[data-testid="stSidebar"]');
-            const overlay = window.parent.document.querySelector('.mobile-menu-overlay');
-            if (sidebar && overlay) {
-                sidebar.classList.toggle('mobile-menu-open');
-                overlay.classList.toggle('active');
-            }
-        }
-        </script>
+        <div class="mobile-menu-overlay" id="mobile-overlay"></div>
     """, unsafe_allow_html=True)
+
+    # JavaScript must be in components.html to execute
+    components.html("""
+        <script>
+        (function() {
+            const parentDoc = window.parent.document;
+
+            function toggleSidebar() {
+                const sidebar = parentDoc.querySelector('[data-testid="stSidebar"]');
+                const overlay = parentDoc.getElementById('mobile-overlay');
+
+                if (sidebar && overlay) {
+                    const isOpen = sidebar.classList.contains('mobile-menu-open');
+                    if (isOpen) {
+                        sidebar.classList.remove('mobile-menu-open');
+                        overlay.classList.remove('active');
+                    } else {
+                        sidebar.classList.add('mobile-menu-open');
+                        overlay.classList.add('active');
+                    }
+                }
+            }
+
+            function closeSidebar() {
+                const sidebar = parentDoc.querySelector('[data-testid="stSidebar"]');
+                const overlay = parentDoc.getElementById('mobile-overlay');
+
+                if (sidebar && overlay) {
+                    sidebar.classList.remove('mobile-menu-open');
+                    overlay.classList.remove('active');
+                }
+            }
+
+            // Use event delegation on the document body for reliability
+            function setupEventDelegation() {
+                // Remove any existing listeners first
+                parentDoc.body.removeEventListener('click', handleClick, true);
+                parentDoc.body.addEventListener('click', handleClick, true);
+            }
+
+            function handleClick(e) {
+                const btn = e.target.closest('#mobile-menu-btn');
+                const overlay = e.target.closest('#mobile-overlay');
+
+                if (btn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleSidebar();
+                } else if (overlay) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    closeSidebar();
+                }
+            }
+
+            // Initialize
+            setupEventDelegation();
+
+            // Re-setup on any DOM changes (Streamlit rerenders)
+            const observer = new MutationObserver(function() {
+                setupEventDelegation();
+            });
+
+            observer.observe(parentDoc.body, { childList: true, subtree: true });
+        })();
+        </script>
+    """, height=0)
 
     # CHECK: Ensure RAG system is initialized before allowing chat
     if st.session_state.rag is None:
@@ -903,14 +961,11 @@ def page_chat():
             st.session_state.step = 6
             st.rerun()
 
-    # Main chat area - Navigation bar
-    col_left, col_center, col_right = st.columns([2, 6, 1])
-
-    with col_center:
-        st.markdown(
-            f"<h4 class='chat-title'>{current_thread['title']}</h4>",
-            unsafe_allow_html=True,
-        )
+    # Main chat area - Title (CSS centered, not using columns)
+    st.markdown(
+        f"<h4 class='chat-title'>{current_thread['title']}</h4>",
+        unsafe_allow_html=True,
+    )
 
     # st.markdown("---")
 
@@ -919,65 +974,64 @@ def page_chat():
         # Anchor for scrolling to quiz
         st.markdown('<div id="quiz-section"></div>', unsafe_allow_html=True)
 
-        # Main layout: Quiz content on left, stats on right
-        quiz_col, stats_col = st.columns([3, 1])
+        # Quiz generation form - stacks vertically on mobile
+        st.markdown('<div class="quiz-generator-section">', unsafe_allow_html=True)
+        st.markdown("Generate a quiz based on the topics discussed or from your textbook!")
 
-        with stats_col:
-            # Stats box styling and content
-            stats = st.session_state.quiz_stats
-            total_answers = stats["total_correct"] + stats["total_incorrect"]
-            correct_pct = (stats["total_correct"] / total_answers * 100) if total_answers > 0 else 0
-            incorrect_pct = (stats["total_incorrect"] / total_answers * 100) if total_answers > 0 else 0
+        quiz_topic = st.text_input(
+            "Enter a topic for the quiz (or leave blank to use recent conversation)",
+            placeholder="e.g., 'photosynthesis' or 'calculus derivatives'",
+            key="quiz_topic_input"
+        )
 
-            st.markdown("""
-                <style>
-                .quiz-stats-box {
-                    background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
-                    border-radius: 12px;
-                    padding: 15px;
-                    border: 1px solid #3d3d5c;
-                }
-                .stats-title {
-                    font-size: 14px;
-                    font-weight: 600;
-                    color: #a0a0b0;
-                    margin-bottom: 12px;
-                    text-align: center;
-                }
-                .stat-item {
-                    display: flex;
-                    justify-content: space-between;
-                    margin: 8px 0;
-                    font-size: 13px;
-                }
-                .stat-label {
-                    color: #b0b0c0;
-                }
-                .stat-value {
-                    font-weight: 600;
-                    color: #ffffff;
-                }
-                .stat-correct {
-                    color: #4ade80 !important;
-                }
-                .stat-incorrect {
-                    color: #f87171 !important;
-                }
-                .stat-divider {
-                    border-top: 1px solid #3d3d5c;
-                    margin: 10px 0;
-                }
-                </style>
-            """, unsafe_allow_html=True)
+        if st.button("Generate Quiz", key="generate_quiz_btn", type="primary", use_container_width=True):
+            # Determine topic and context
+            topic = quiz_topic if quiz_topic else "recent discussion"
 
-            st.markdown(f"""
-                <div class="quiz-stats-box">
-                    <div class="stats-title">Quiz Statistics</div>
+            # Get context from recent messages or RAG system
+            context = ""
+            if current_thread["messages"]:
+                # Use last few messages as context
+                recent_messages = current_thread["messages"][-4:]
+                context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in recent_messages])
+            else:
+                # Use RAG system to get context
+                if quiz_topic:
+                    retrieved_docs = st.session_state.rag.vector_db.similarity_search(quiz_topic, k=3)
+                    context = "\n".join([doc.page_content for doc in retrieved_docs])
+
+            # Generate quiz
+            with st.spinner("Generating quiz..."):
+                quiz_data = generate_quiz(topic, st.session_state.level, context, None)
+
+                if quiz_data:
+                    st.session_state.current_quiz = quiz_data
+                    st.session_state.quiz_answers = {}
+                    st.session_state.quiz_submitted = False
+                    # Clear any existing radio button keys
+                    for k in list(st.session_state.keys()):
+                        if k.startswith("quiz_q_"):
+                            del st.session_state[k]
+                    st.rerun()
+                else:
+                    st.error("Failed to generate quiz. Please try again.")
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # Stats section - appears below on mobile, beside on desktop via CSS
+        stats = st.session_state.quiz_stats
+        total_answers = stats["total_correct"] + stats["total_incorrect"]
+        correct_pct = (stats["total_correct"] / total_answers * 100) if total_answers > 0 else 0
+        incorrect_pct = (stats["total_incorrect"] / total_answers * 100) if total_answers > 0 else 0
+
+        st.markdown(f"""
+            <div class="quiz-stats-box">
+                <div class="stats-title">📊 Quiz Statistics</div>
+                <div class="stats-grid">
                     <div class="stat-item">
                         <span class="stat-label">Quizzes Taken</span>
                         <span class="stat-value">{stats["total_quizzes"]}</span>
                     </div>
-                    <div class="stat-divider"></div>
                     <div class="stat-item">
                         <span class="stat-label">Correct</span>
                         <span class="stat-value stat-correct">{stats["total_correct"]} ({correct_pct:.0f}%)</span>
@@ -986,58 +1040,13 @@ def page_chat():
                         <span class="stat-label">Incorrect</span>
                         <span class="stat-value stat-incorrect">{stats["total_incorrect"]} ({incorrect_pct:.0f}%)</span>
                     </div>
-                    <div class="stat-divider"></div>
                     <div class="stat-item">
                         <span class="stat-label">Total Answers</span>
                         <span class="stat-value">{total_answers}</span>
                     </div>
                 </div>
-            """, unsafe_allow_html=True)
-
-        with quiz_col:
-            st.markdown("Generate a quiz based on the topics discussed or from your textbook!")
-
-            input_col1, input_col2 = st.columns([3, 1])
-
-            with input_col1:
-                quiz_topic = st.text_input(
-                    "Enter a topic for the quiz (or leave blank to use recent conversation)",
-                    placeholder="e.g., 'photosynthesis' or 'calculus derivatives'",
-                    key="quiz_topic_input"
-                )
-
-            with input_col2:
-                if st.button("Generate Quiz", key="generate_quiz_btn", type="primary", use_container_width=True):
-                    # Determine topic and context
-                    topic = quiz_topic if quiz_topic else "recent discussion"
-
-                    # Get context from recent messages or RAG system
-                    context = ""
-                    if current_thread["messages"]:
-                        # Use last few messages as context
-                        recent_messages = current_thread["messages"][-4:]
-                        context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in recent_messages])
-                    else:
-                        # Use RAG system to get context
-                        if quiz_topic:
-                            retrieved_docs = st.session_state.rag.vector_db.similarity_search(quiz_topic, k=3)
-                            context = "\n".join([doc.page_content for doc in retrieved_docs])
-
-                    # Generate quiz
-                    with st.spinner("Generating quiz..."):
-                        quiz_data = generate_quiz(topic, st.session_state.level, context, None)
-
-                        if quiz_data:
-                            st.session_state.current_quiz = quiz_data
-                            st.session_state.quiz_answers = {}
-                            st.session_state.quiz_submitted = False
-                            # Clear any existing radio button keys
-                            for k in list(st.session_state.keys()):
-                                if k.startswith("quiz_q_"):
-                                    del st.session_state[k]
-                            st.rerun()
-                        else:
-                            st.error("Failed to generate quiz. Please try again.")
+            </div>
+        """, unsafe_allow_html=True)
 
         # Display quiz if one exists
         if st.session_state.current_quiz:
