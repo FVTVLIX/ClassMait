@@ -975,65 +975,43 @@ def page_chat():
                     cleaned = cleaned[3:].strip()
                 return cleaned
 
-            # Display each question
-            for idx, question in enumerate(questions):
-                st.markdown(f"**Question {idx + 1}:** {question['question_text']}")
+            # If quiz is already submitted, show results (locked)
+            if st.session_state.quiz_submitted:
+                for idx, question in enumerate(questions):
+                    st.markdown(f"**Question {idx + 1}:** {question['question_text']}")
 
-                # Get options and clean them
-                options = question['options']
-                cleaned_options = [clean_option(opt) for opt in options]
+                    # Get options and clean them
+                    options = question['options']
+                    cleaned_options = [clean_option(opt) for opt in options]
+                    display_options = [f"{chr(65+i)}. {cleaned_options[i]}" for i in range(len(cleaned_options))]
 
-                # Create display options with letters
-                display_options = [f"{chr(65+i)}. {cleaned_options[i]}" for i in range(len(cleaned_options))]
-
-                # Get stored answer index
-                stored_answer = st.session_state.quiz_answers.get(f"q_{idx}")
-                default_idx = None
-                if stored_answer in ["A", "B", "C", "D"]:
-                    default_idx = ord(stored_answer) - ord("A")
-
-                # Radio buttons for options
-                selected = st.radio(
-                    f"Q{idx + 1}",
-                    options=display_options,
-                    key=f"quiz_q_{idx}",
-                    index=default_idx,
-                    label_visibility="collapsed"
-                )
-
-                # Store answer when selected
-                if selected:
-                    st.session_state.quiz_answers[f"q_{idx}"] = selected[0]
-
-                # Show explanation if quiz is submitted
-                if st.session_state.quiz_submitted:
-                    correct = question['correct_answer']
+                    # Show locked answer (disabled radio)
                     user_answer = st.session_state.quiz_answers.get(f"q_{idx}")
+                    answer_idx = ord(user_answer) - ord("A") if user_answer in ["A", "B", "C", "D"] else 0
 
+                    st.radio(
+                        f"Q{idx + 1}",
+                        options=display_options,
+                        key=f"quiz_result_{idx}",
+                        index=answer_idx,
+                        disabled=True,
+                        label_visibility="collapsed"
+                    )
+
+                    # Show feedback
+                    correct = question['correct_answer']
                     if user_answer == correct:
                         st.success(f"Correct! The answer is {correct}.")
                     else:
                         st.error(f"Incorrect. You selected {user_answer}. The correct answer is {correct}.")
 
                     st.info(f"**Explanation:** {question['explanation']}")
+                    st.markdown("---")
 
-                st.markdown("---")
+                # Show score and New Quiz button
+                col1, col2 = st.columns([1, 1])
 
-            # Submit/Reset buttons
-            col1, col2, col3 = st.columns([1, 1, 1])
-
-            with col1:
-                if not st.session_state.quiz_submitted:
-                    if st.button("Submit Quiz", key="submit_quiz_btn", type="primary", use_container_width=True):
-                        if len(st.session_state.quiz_answers) == len(questions):
-                            st.session_state.quiz_submitted = True
-                            st.rerun()
-                        else:
-                            st.warning("Please answer all questions before submitting!")
-
-            with col2:
-                if st.session_state.quiz_submitted:
-                    # Calculate score
+                with col1:
                     correct_count = sum(
                         1 for idx, q in enumerate(questions)
                         if st.session_state.quiz_answers.get(f"q_{idx}") == q['correct_answer']
@@ -1042,16 +1020,57 @@ def page_chat():
                     score_percentage = (correct_count / total_questions * 100) if total_questions > 0 else 0
                     st.metric("Your Score", f"{correct_count}/{total_questions}", f"{score_percentage:.0f}%")
 
-            with col3:
-                if st.button("New Quiz", key="new_quiz_btn", use_container_width=True):
-                    # Clear quiz-related keys from session state
-                    for k in list(st.session_state.keys()):
-                        if k.startswith("quiz_q_"):
-                            del st.session_state[k]
-                    st.session_state.current_quiz = None
-                    st.session_state.quiz_answers = {}
-                    st.session_state.quiz_submitted = False
-                    st.rerun()
+                with col2:
+                    if st.button("New Quiz", key="new_quiz_btn", use_container_width=True):
+                        # Clear quiz-related keys from session state
+                        for k in list(st.session_state.keys()):
+                            if k.startswith("quiz_q_") or k.startswith("quiz_result_"):
+                                del st.session_state[k]
+                        st.session_state.current_quiz = None
+                        st.session_state.quiz_answers = {}
+                        st.session_state.quiz_submitted = False
+                        st.rerun()
+
+            else:
+                # Quiz not submitted - use form to prevent flickering
+                with st.form(key="quiz_form"):
+                    for idx, question in enumerate(questions):
+                        st.markdown(f"**Question {idx + 1}:** {question['question_text']}")
+
+                        # Get options and clean them
+                        options = question['options']
+                        cleaned_options = [clean_option(opt) for opt in options]
+                        display_options = [f"{chr(65+i)}. {cleaned_options[i]}" for i in range(len(cleaned_options))]
+
+                        # Radio buttons for options (inside form - no rerun on selection)
+                        st.radio(
+                            f"Q{idx + 1}",
+                            options=display_options,
+                            key=f"quiz_q_{idx}",
+                            index=None,
+                            label_visibility="collapsed"
+                        )
+                        st.markdown("---")
+
+                    # Submit button inside form
+                    submitted = st.form_submit_button("Submit Quiz", type="primary", use_container_width=True)
+
+                    if submitted:
+                        # Collect answers from form
+                        all_answered = True
+                        for idx in range(len(questions)):
+                            form_key = f"quiz_q_{idx}"
+                            if form_key in st.session_state and st.session_state[form_key]:
+                                answer_letter = st.session_state[form_key][0]
+                                st.session_state.quiz_answers[f"q_{idx}"] = answer_letter
+                            else:
+                                all_answered = False
+
+                        if all_answered and len(st.session_state.quiz_answers) == len(questions):
+                            st.session_state.quiz_submitted = True
+                            st.rerun()
+                        else:
+                            st.warning("Please answer all questions before submitting!")
 
     st.markdown("---")
 
