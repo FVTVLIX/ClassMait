@@ -9,6 +9,7 @@ import json
 import uuid
 from datetime import datetime
 import streamlit as st
+import streamlit.components.v1 as components
 from pathlib import Path
 
 # -------------------------------------------------
@@ -793,51 +794,55 @@ def page_chat():
     if "processing_response" not in st.session_state:
         st.session_state.processing_response = False
 
-    # Add mobile menu toggle button and JavaScript
+    # Add mobile menu toggle button (HTML only, no JS here)
     st.markdown("""
         <button class="mobile-menu-toggle" id="mobile-menu-btn">
             ☰ Menu
         </button>
         <div class="mobile-menu-overlay" id="mobile-overlay"></div>
+    """, unsafe_allow_html=True)
+
+    # JavaScript must be in components.html to execute
+    components.html("""
         <script>
         (function() {
-            // Wait for DOM to be ready
             function initMobileMenu() {
-                const btn = document.getElementById('mobile-menu-btn');
-                const overlay = document.getElementById('mobile-overlay');
-                const sidebar = window.parent.document.querySelector('[data-testid="stSidebar"]');
+                // Access elements in the parent Streamlit document
+                const parentDoc = window.parent.document;
+                const btn = parentDoc.getElementById('mobile-menu-btn');
+                const overlay = parentDoc.getElementById('mobile-overlay');
+                const sidebar = parentDoc.querySelector('[data-testid="stSidebar"]');
 
                 if (btn && overlay && sidebar) {
-                    // Remove any existing listeners by cloning
-                    const newBtn = btn.cloneNode(true);
-                    btn.parentNode.replaceChild(newBtn, btn);
+                    // Only add listeners if not already added
+                    if (!btn.dataset.initialized) {
+                        btn.dataset.initialized = 'true';
 
-                    const newOverlay = overlay.cloneNode(true);
-                    overlay.parentNode.replaceChild(newOverlay, overlay);
+                        btn.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            sidebar.classList.toggle('mobile-menu-open');
+                            overlay.classList.toggle('active');
+                        });
 
-                    // Add click listener to button
-                    newBtn.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        sidebar.classList.toggle('mobile-menu-open');
-                        newOverlay.classList.toggle('active');
-                    });
-
-                    // Add click listener to overlay to close menu
-                    newOverlay.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        sidebar.classList.remove('mobile-menu-open');
-                        newOverlay.classList.remove('active');
-                    });
+                        overlay.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            sidebar.classList.remove('mobile-menu-open');
+                            overlay.classList.remove('active');
+                        });
+                    }
+                } else {
+                    // Elements not ready, retry
+                    setTimeout(initMobileMenu, 100);
                 }
             }
 
-            // Run after a short delay to ensure elements are rendered
-            setTimeout(initMobileMenu, 100);
+            // Start initialization
+            setTimeout(initMobileMenu, 200);
         })();
         </script>
-    """, unsafe_allow_html=True)
+    """, height=0)
 
     # CHECK: Ensure RAG system is initialized before allowing chat
     if st.session_state.rag is None:
