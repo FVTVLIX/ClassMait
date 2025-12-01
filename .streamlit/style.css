@@ -15,8 +15,8 @@
     /* Colors */
     --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     --primary-background: #F8F8F8;
-    --primary-color: #667eea;
-    --secondary-color: #764ba2;
+    --primary-color: #424d82;
+    --secondary-color: #74b0d8;
     --dark-bg: #1e1e2e;
     --dark-border: #4a5568;
     --text-primary: #2d3748;
@@ -303,16 +303,16 @@ body {
    CHAT INTERFACE PAGE
    ================================================ */
 
-.st-emotion-cache-467cry .chat-title {
+.chat-title {
     color: var(--text-primary);
     font-family: var(--font-primary);
-    font-size: 2.5rem;
+    font-size: 1.5rem;
     font-weight: 700;
-    text-align: center;
-    margin: 0;
-    justify-content: center;
-    align-items: center;
-    display: flex;
+    text-align: center !important;
+    margin: 0 auto;
+    padding: var(--spacing-md) 0;
+    width: 100%;
+    display: block;
 }
 
 /* ================================================
@@ -367,8 +367,18 @@ body {
     min-height: 100vh;
 }
 
+/* Main content - always centered regardless of sidebar */
+.main {
+    position: fixed !important;
+    left: 250px !important; /* Match sidebar width */
+    right: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    overflow-y: auto !important;
+}
+
 .main .block-container {
-    max-width: 1200px;
+    max-width: 900px;
     margin: 0 auto;
     padding-left: var(--spacing-xl);
     padding-right: var(--spacing-xl);
@@ -425,8 +435,22 @@ h1, h2, h3, h4, h5, h6 {
     animation: slideInFromLeft var(--transition-base);
 }
 
+/* Force sidebar to always be visible on desktop */
+[data-testid="stSidebar"][aria-expanded="false"] {
+    display: block !important;
+    width: 250px !important;
+    min-width: 250px !important;
+    margin-left: 0 !important;
+    transform: none !important;
+}
+
 /* Hide collapse button - sidebar always visible on desktop */
 [data-testid="collapsedControl"] {
+    display: none !important;
+}
+
+/* Hide the sidebar close button on desktop */
+[data-testid="stSidebar"] button[kind="header"] {
     display: none !important;
 }
 
@@ -664,6 +688,64 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ================================================
+   QUIZ SECTION
+   ================================================ */
+.quiz-generator-section {
+    margin-bottom: var(--spacing-lg);
+}
+
+.quiz-stats-box {
+    background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    border: 1px solid #3d3d5c;
+    margin-top: var(--spacing-md);
+}
+
+.stats-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #e2e8f0;
+    margin-bottom: var(--spacing-md);
+    text-align: center;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-md);
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--spacing-sm);
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-md);
+}
+
+.stat-label {
+    color: #94a3b8;
+    font-size: 0.75rem;
+    margin-bottom: 4px;
+}
+
+.stat-value {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #ffffff;
+}
+
+.stat-correct {
+    color: #4ade80 !important;
+}
+
+.stat-incorrect {
+    color: #f87171 !important;
+}
+
+/* ================================================
    CHAT INPUT
    ================================================ */
 .stChatInputContainer {
@@ -741,24 +823,47 @@ h1, h2, h3, h4, h5, h6 {
 /* ================================================
    MOBILE MENU TOGGLE (Mobile Only)
    ================================================ */
+/* Hide mobile menu elements by default (desktop) */
+.mobile-menu-toggle {
+    display: none;
+}
+
+.mobile-menu-overlay {
+    display: none;
+}
+
 @media (max-width: 768px) {
 
     /* Hide sidebar by default on mobile */
     [data-testid="stSidebar"] {
-        position: fixed;
-        left: -100%;
-        top: 0;
-        bottom: 0;
-        width: 80%;
-        max-width: 300px;
-        min-width: 280px;
-        z-index: 1000;
-        transition: left var(--transition-base);
+        position: fixed !important;
+        left: -100% !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        width: 80% !important;
+        max-width: 300px !important;
+        min-width: 280px !important;
+        z-index: 1000 !important;
+        transition: left 0.3s ease !important;
+        transform: none !important;
+        margin-left: 0 !important;
+    }
+
+    /* Override any aria-expanded styles on mobile */
+    [data-testid="stSidebar"][aria-expanded="false"] {
+        left: -100% !important;
+        display: block !important;
+        width: 80% !important;
+        max-width: 300px !important;
     }
 
     /* Show sidebar when menu is open */
     [data-testid="stSidebar"].mobile-menu-open {
-        left: 0;
+        left: 0 !important;
+    }
+
+    [data-testid="stSidebar"].mobile-menu-open[aria-expanded="false"] {
+        left: 0 !important;
     }
 
     /* Mobile overlay */
@@ -771,7 +876,6 @@ h1, h2, h3, h4, h5, h6 {
         bottom: 0;
         background: rgba(0, 0, 0, 0.5);
         z-index: 999;
-        animation: fadeIn 0.3s ease;
     }
 
     .mobile-menu-overlay.active {
@@ -782,65 +886,7 @@ h1, h2, h3, h4, h5, h6 {
     .mobile-menu-toggle {
         display: block;
         position: fixed;
-        top: 1rem;
-        left: 1rem;
-        z-index: 1001;
-        background-color: var(--primary-color);
-        color: white;
-        border: none;
-        border-radius: var(--radius-md);
-        padding: 0.75rem 1rem;
-        font-size: 1rem;
-        cursor: pointer;
-        box-shadow: var(--shadow-lg);
-        transition: all var(--transition-base);
-    }
-
-    .mobile-menu-toggle:hover {
-        background-color: var(--secondary-color);
-        transform: scale(1.05);
-    }
-
-        /* Hide sidebar by default on mobile */
-    [data-testid="stSidebar"] {
-        position: fixed;
-        left: -100%;
-        top: 0;
-        bottom: 0;
-        width: 80%;
-        max-width: 300px;
-        min-width: 280px;
-        z-index: 1000;
-        transition: left var(--transition-base);
-    }
-
-    /* Show sidebar when menu is open */
-    [data-testid="stSidebar"].mobile-menu-open {
-        left: 0;
-    }
-
-    /* Mobile overlay */
-    .mobile-menu-overlay {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 999;
-        animation: fadeIn 0.3s ease;
-    }
-
-    .mobile-menu-overlay.active {
-        display: block;
-    }
-
-    /* Show mobile menu button */
-    .mobile-menu-toggle {
-        display: block;
-        position: fixed;
-        top: 1rem;
+        top: 2rem;
         left: 1rem;
         z-index: 1001;
         background-color: var(--primary-color);
@@ -872,10 +918,15 @@ h1, h2, h3, h4, h5, h6 {
         max-width: 100%;
     } */
 
-    /* Main content full width on mobile */
+    /* Main content full width on mobile - override fixed positioning */
     .main {
-        margin-left: 0 !important;
+        position: fixed !important;
+        left: 0 !important;
+        right: 0 !important;
+        top: 0 !important;
+        bottom: 0 !important;
         width: 100% !important;
+        margin-left: 0 !important;
     }
 
     [data-testid="stSidebar"] .stButton button {
@@ -888,6 +939,33 @@ h1, h2, h3, h4, h5, h6 {
         max-width: 100%;
         width: 100%;
         font-size: 0.9rem;
+    }
+
+    /* Quiz section mobile styles */
+    .quiz-stats-box {
+        padding: var(--spacing-md);
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--spacing-sm);
+    }
+
+    .stat-item {
+        padding: var(--spacing-xs);
+    }
+
+    .stat-label {
+        font-size: 0.65rem;
+    }
+
+    .stat-value {
+        font-size: 0.95rem;
+    }
+
+    .stExpander {
+        max-width: 100%;
+        margin: var(--spacing-sm) 0;
     }
 
     /* Typography */
