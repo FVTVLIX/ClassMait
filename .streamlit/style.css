@@ -15,8 +15,8 @@
     /* Colors */
     --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     --primary-background: #F8F8F8;
-    --primary-color: #667eea;
-    --secondary-color: #764ba2;
+    --primary-color: #424d82;
+    --secondary-color: #74b0d8;
     --dark-bg: #1e1e2e;
     --dark-border: #4a5568;
     --text-primary: #2d3748;
@@ -886,7 +886,7 @@ h1, h2, h3, h4, h5, h6 {
     .mobile-menu-toggle {
         display: block;
         position: fixed;
-        top: 1rem;
+        top: 2rem;
         left: 1rem;
         z-index: 1001;
         background-color: var(--primary-color);
