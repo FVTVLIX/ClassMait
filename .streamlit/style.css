@@ -370,7 +370,7 @@ body {
 /* Main content - always centered regardless of sidebar */
 .main {
     position: fixed !important;
-    left: 250px !important; /* Match sidebar width */
+    left: 280px !important; /* Match sidebar width */
     right: 0 !important;
     top: 0 !important;
     bottom: 0 !important;
@@ -430,7 +430,7 @@ h1, h2, h3, h4, h5, h6 {
 [data-testid="stSidebar"] {
     background-color: var(--dark-bg);
     border-right: 2px solid var(--dark-border);
-    min-width: 250px;
+    min-width: 280px;
     max-width: 350px;
     animation: slideInFromLeft var(--transition-base);
 }
