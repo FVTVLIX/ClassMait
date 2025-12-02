@@ -1,6 +1,6 @@
 <div align="center">
 
-# ClassMait
+# CLASSMaiT
 
 ### AI-Powered Learning Assistant for Textbook Mastery
 
@@ -17,6 +17,10 @@
 </div>
 
 ---
+
+## Youtube Overview Video
+
+[![CLASSMaiT Thumbnail Video](https://img.youtube.com/vi/6qU4fPMoSVU/0.jpg)](https://www.youtube.com/watch?v=6qU4fPMoSVU)
 
 ## Overview
 
